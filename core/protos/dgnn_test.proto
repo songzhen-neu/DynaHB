@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+//option java_multiple_files = true;
+//option java_package = "io.grpc.examples.prototest";
+//option java_outer_classname = "ProtoTest";
+//option objc_class_prefix = "PT";
+
+
+
+package dgnn_test;
+
+service DgnnProtoService{
+  rpc barrier(NullMessage) returns(NullMessage){}
+  rpc setAndSendGDynamic(EmbGradMessage) returns(NullMessage){}
+  rpc sendAccuracy(AccuracyMessage) returns(AccuracyMessage){}
+  rpc workerPullEmbDynamic(EmbGradMessage) returns(EmbGradMessage){}
+  rpc pushVertex2WK(NodeMessage) returns(NullMessage){}
+
+}
+
+
+message NullMessage{
+
+}
+
+
+message AccuracyMessage{
+  float val_acc=1;
+  float val_acc_entire=2;
+  float train_acc=3;
+  float train_acc_entire=4;
+  float test_acc=5;
+  float test_acc_entire=6;
+  float test_f1=7;
+  float val_f1=8;
+  float test_f1_entire=9;
+  float val_f1_entire=10;
+}
+
+
+message EmbGradMessage{
+  repeated int32 nodes=1;
+  int32 layerId=2;
+  int32 workerId=3;
+  string status=4;
+  int32 epoch=5;
+  int32 featsize=6;
+  int32 nodesize=7;
+  repeated float embs=8;
+  string graph_mode=9;
+  int32 snapId=10;
+}
+
+
+
+message NodeMessage{
+  repeated int32 nodes = 1;
+  int32 layid=2;
+  int32 wid=3;
+}
+
+
+
