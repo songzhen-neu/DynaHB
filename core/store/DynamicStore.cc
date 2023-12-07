@@ -24,6 +24,7 @@ map<int,vector<int>> DynamicStore::vertex_push;
 map<int,vector<float>> DynamicStore::message_fp;
 
 
-float DynamicStore::train_accuracy=0;
-float DynamicStore::val_accuracy=0;
-float DynamicStore::test_accuracy=0;
+vector<float> DynamicStore::accuracy_total;
+vector<int> DynamicStore::acc_vertex_num ;
+
+//vector<int> DynamicStore::window_batch_size;

@@ -68,25 +68,22 @@ void DGNNClient::set_serverAddress(string serverAddress) {
 
 
 
-map<string, float>
-DGNNClient::sendAccuracy(float val_acc, float train_acc, float test_acc) {
+vector<float>
+DGNNClient::sendAccuracy(const vector<int> &v_num, const vector<float> &acc) {
     ClientContext context;
     AccuracyMessage request;
     AccuracyMessage reply;
 
 
-    request.set_val_acc(val_acc);
-    request.set_train_acc(train_acc);
-    request.set_test_acc(test_acc);
+    request.mutable_v_num()->Add(v_num.begin(),v_num.end());
+    request.mutable_acc()->Add(acc.begin(),acc.end());
+    request.set_worker_id(DynamicStore::worker_id);
 
     Status status = stub_->sendAccuracy(&context, request, &reply);
 
-    map<string, float> map_acc;
-    map_acc.insert(pair<string, float>("val", reply.val_acc_entire()));
-    map_acc.insert(pair<string, float>("train", reply.train_acc_entire()));
-    map_acc.insert(pair<string, float>("test", reply.test_acc_entire()));
+    vector<float> acc_total(reply.acc_total().begin(),reply.acc_total().end());
 
-    return map_acc;
+    return acc_total;
 }
 
 

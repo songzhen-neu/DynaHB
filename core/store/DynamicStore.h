@@ -43,9 +43,10 @@ public:
     static map<int,vector<float>> message_fp;
 
 
-    static float val_accuracy ;
-    static float train_accuracy ;
-    static float test_accuracy ;
+    static vector<float> accuracy_total ;
+    static vector<int> acc_vertex_num ;
+
+//    static vector<int> window_batch_size;
 
 
 

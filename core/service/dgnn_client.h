@@ -66,7 +66,7 @@ public:
     static void *worker_pull_g_dynamic_parallel(void *metaData_void);
 
 
-    map<string, float> sendAccuracy(float val_acc, float train_acc, float acc_test);
+    vector<float> sendAccuracy(const vector<int> &v_num, const vector<float> &acc);
 
 
     static void *pushVertex2WK(void *metaData);

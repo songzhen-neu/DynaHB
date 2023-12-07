@@ -70,29 +70,36 @@ Status ServiceImpl::barrier(
 Status ServiceImpl::sendAccuracy(ServerContext *context, const AccuracyMessage *request,
                                  AccuracyMessage *reply) {
 
+    if(request->worker_id()==0){
+        DynamicStore::accuracy_total.clear();
+        DynamicStore::acc_vertex_num.clear();
+        for(int i=0;i<request->v_num_size();i++){
+            DynamicStore::accuracy_total.push_back(0);
+            DynamicStore::acc_vertex_num.push_back(0);
+        }
+    }
+
+    barrier_server(DynamicStore::worker_num);
 
     unique_lock<mutex> lck(ThreadUtil::mtx_common);
-
-    DynamicStore::val_accuracy = 0;
-    DynamicStore::train_accuracy = 0;
-    DynamicStore::test_accuracy = 0;
-
+    for(int i=0;i<request->v_num_size();i++){
+        DynamicStore::accuracy_total[i]+=request->acc(i)*request->v_num(i);
+        DynamicStore::acc_vertex_num[i]+=request->v_num(i);
+    }
     lck.unlock();
-    barrier_server(DynamicStore::worker_num);
-
-
-    DynamicStore::val_accuracy += request->val_acc();
-    DynamicStore::train_accuracy += request->train_acc();
-    DynamicStore::test_accuracy += request->test_acc();
-
-
 
     barrier_server(DynamicStore::worker_num);
 
+    if(request->worker_id()==0) {
+        for(int i=0;i<request->v_num_size();i++){
+            DynamicStore::accuracy_total[i]/=DynamicStore::acc_vertex_num[i];
 
-    reply->set_val_acc_entire(DynamicStore::val_accuracy);
-    reply->set_train_acc_entire(DynamicStore::train_accuracy);
-    reply->set_test_acc_entire(DynamicStore::test_accuracy);
+        }
+    }
+
+    barrier_server(DynamicStore::worker_num);
+
+    reply->mutable_acc_total()->Add(DynamicStore::accuracy_total.begin(),DynamicStore::accuracy_total.end());
 
     return Status::OK;
 

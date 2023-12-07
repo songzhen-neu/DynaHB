@@ -207,7 +207,7 @@ class DynamicGraphTemporalSignal(object):
 
 
 
-    def generate_batch(self, window_id, batch_id):
+    def generate_batch(self, window_id):
         batch_size = context.glContext.config['batch_size']
         window_size = context.glContext.config['window_size']
         layer_num=context.glContext.config['layer_num']

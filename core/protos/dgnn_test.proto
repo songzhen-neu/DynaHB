@@ -15,6 +15,7 @@ service DgnnProtoService{
   rpc sendAccuracy(AccuracyMessage) returns(AccuracyMessage){}
   rpc workerPullEmbDynamic(EmbGradMessage) returns(EmbGradMessage){}
   rpc pushVertex2WK(NodeMessage) returns(NullMessage){}
+//  rpc pushWinBatSizeToAll
 
 }
 
@@ -23,18 +24,15 @@ message NullMessage{
 
 }
 
+//message IntArrayMessage{
+//  repeated int64 array=1;
+//}
 
 message AccuracyMessage{
-  float val_acc=1;
-  float val_acc_entire=2;
-  float train_acc=3;
-  float train_acc_entire=4;
-  float test_acc=5;
-  float test_acc_entire=6;
-  float test_f1=7;
-  float val_f1=8;
-  float test_f1_entire=9;
-  float val_f1_entire=10;
+  repeated int64 v_num=1;
+  repeated float acc=2;
+  repeated float acc_total=3;
+  int64 worker_id=4;
 }
 
 

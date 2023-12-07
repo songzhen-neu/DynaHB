@@ -16,18 +16,22 @@ class Context(object):
         'emb_dims': [],
         'iterNum': 500,
         'lr': 0.01,
-        'print_result_interval': 10,
+        'print_result_interval': 5,
         'device': 'cpu',
+
+        # optimization switch
+        'is_adap_batch':False,
 
         # Dynamic Graphs
         'data_path':"/mnt/data/dataset/england_covid", #england_covid
         'feature_dim':8,
         'data_num':129,
-        'hidden':[8,8],
+        'hidden':[8],
         'class_num':1,
         'train_ratio':0.2,
-        'batch_size':30,
-        'window_size':10,
+        'window_size':1, # 4
+        'batch_size':1, # 32
+
 
         # 'data_path':"/mnt/data/dataset/test", #england_covid
         # 'feature_dim':2,
@@ -35,8 +39,9 @@ class Context(object):
         # 'hidden':[4,4],
         # 'class_num':1,
         # 'train_ratio':0.5,
-        # 'batch_size':1,
         # 'window_size':1,
+        # 'batch_size':1,
+
 
 
     }

@@ -28,6 +28,7 @@ PYBIND11_MODULE(pb11_ec, m) {
             .def("getRmtFeats",&Router::getRmtFeats)
             .def("setAndSendGDynamic",&Router::setAndSendGDynamic)
             .def("pushVertex",&Router::pushVertex);
+//            .def("updateRLStrategy",&Router::updateRLStrategy);
 
 
     py::class_<DynamicGraphBuild>(m,"DynamicGraphBuild")

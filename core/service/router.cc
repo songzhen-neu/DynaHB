@@ -248,4 +248,6 @@ void Router::pthread_vec_join(const vector<pthread_t> &pthreads,int worker_id,in
 }
 
 
-
+//vector<int,int> Router::updateRLStrategy(const vector<int> &window_batch_size){
+//
+//}

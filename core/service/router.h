@@ -25,6 +25,8 @@ public:
     static void pthread_vec_join(const vector<pthread_t> &pthreads,int worker_id,int worker_num);
 
     py::array_t<float> getRmtFeats(const string &status,int snap_id, map<int,vector<int>>& vertex_push);
+    vector<int,int> updateRLStrategy(const vector<int> &window_batch_size);
+
 };
 
 
