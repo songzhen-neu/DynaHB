@@ -2,7 +2,7 @@ import json
 import urllib
 import numpy as np
 from ..signal import DynamicGraphTemporalSignal
-
+from python.torch_geometric_temporal.dataset.data_process.data_cache import start_cache
 
 def transform_degree(x, cutoff=4):
     log_deg = np.ceil(np.log(x + 1.0))
@@ -58,6 +58,9 @@ class TwitterTennisDatasetLoader(object):
     ):
         self.N = N
         self.target_offset = target_offset
+        self.target_vertex=None
+        self.degs=None
+        self.old2new_maps=None
         if event_id in ["rg17", "uo17"]:
             self.event_id = event_id
         else:
@@ -74,13 +77,16 @@ class TwitterTennisDatasetLoader(object):
 
     def _read_web_data(self):
         fname = "twitter_tennis_%s.json" % self.event_id
-        url = (
-            "https://raw.githubusercontent.com/ferencberes/pytorch_geometric_temporal/developer/dataset/"
-            + fname
-        )
-        self._dataset = json.loads(urllib.request.urlopen(url).read())
+        # url = (
+        #     "https://raw.githubusercontent.com/ferencberes/pytorch_geometric_temporal/developer/dataset/"
+        #     + fname
+        # )
+        # self._dataset = json.loads(urllib.request.urlopen(url).read())
         # with open("/home/fberes/git/pytorch_geometric_temporal/dataset/"+fname) as f:
         #    self._dataset = json.load(f)
+        local_file_path = "/mnt/data/dataset/twitter_tennis/" + fname
+        with open(local_file_path, "r") as file:
+            self._dataset = json.load(file)
 
     def _get_edges(self):
         edge_indices = []
@@ -128,17 +134,23 @@ class TwitterTennisDatasetLoader(object):
                 y = y[: self.N]
             self.targets.append(y)
 
-    def get_dataset(self) -> DynamicGraphTemporalSignal:
+    def get_dataset(self,lags=0) -> DynamicGraphTemporalSignal:
         """Returning the TennisDataset data iterator.
 
         Return types:
             * **dataset** *(DynamicGraphTemporalSignal)* - Selected Twitter tennis dataset (Roland-Garros 2017 or USOpen 2017).
         """
+        self.lags=0
+        self.snapshot_count=self._dataset["time_periods"] - self.lags
         self._get_edges()
         self._get_edge_weights()
         self._get_features()
         self._get_targets()
-        dataset = DynamicGraphTemporalSignal(
-            self.edges, self.edge_weights, self.features, self.targets
-        )
+        # dataset = DynamicGraphTemporalSignal(
+        #     self.edges, self.edge_weights, self.features, self.targets
+        # )
+        start_cache(self)
+
+        dataset = DynamicGraphTemporalSignal(self.edges, self.edge_weights, self.features, self.targets,
+                                             self.target_vertex, self.degs, self.old2new_maps)
         return dataset

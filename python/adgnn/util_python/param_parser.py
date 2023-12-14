@@ -65,7 +65,7 @@ def parserInit():
         context.glContext.config['device'] = iter_lr_pttMethod_printInterval_device[4]
 
 
-    context.glContext.ipInit(args.workers)
+    # context.glContext.ipInit(args.workers)
     printContext()
 
 

@@ -144,7 +144,7 @@ class AdapRLTuner:
         hidden_state = [None for i in range(len(context.glContext.config['hidden']))]
         cost_test = 0
         for time, snapshot in enumerate(test_dataset):
-            y_hat, hidden_state = model(snapshot.x, snapshot.edge, snapshot.edge_weight, hidden_state, time, 'test',
+            y_hat, hidden_state = model(snapshot.x, snapshot.edge, snapshot.edge_weight, hidden_state,
                                         snapshot.deg)
             cost_test = cost_test + torch.mean((y_hat.view(-1) - snapshot.y) ** 2)
         cost_test = cost_test / (time + 1)

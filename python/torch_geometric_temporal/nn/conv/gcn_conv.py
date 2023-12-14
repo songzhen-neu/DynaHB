@@ -98,7 +98,7 @@ def gcn_norm(edge_index, edge_weight=None, num_nodes=None, improved=False,
                                  device=edge_index.device)
 
     row, col = edge_index[0], edge_index[1]
-    row, col=np.array(row),np.array(col)
+    # row, col=np.array(row),np.array(col)
 
     # idx = col if flow == 'source_to_target' else row
     # deg = scatter(edge_weight, idx, dim=0, dim_size=num_nodes, reduce='sum')
@@ -191,9 +191,12 @@ class GCNConv(MessagePassing):
 
         self.lin = Linear(in_channels, out_channels, bias=False,
                           weight_initializer='glorot')
+        # self.lin.weight=Parameter(self.lin.weight.to(device))
 
         if bias:
             self.bias = Parameter(torch.Tensor(out_channels))
+            # self.bias=Parameter(self.bias.to(device))
+
         else:
             self.register_parameter('bias', None)
 

@@ -44,9 +44,12 @@ class TGCN(torch.nn.Module):
             cached=self.cached,
             add_self_loops=self.add_self_loops,
             normalize=True,
+            # device=context.glContext.config['device']
         )
 
         self.linear_z = torch.nn.Linear(2 * self.out_channels, self.out_channels)
+        # self.linear_z.weight=self.linear_z.weight.to(context.glContext.config['device'])
+        # self.linear_z.bias=self.linear_z.bias.to(context.glContext.config['device'])
 
     def _create_reset_gate_parameters_and_layers(self):
 
@@ -57,9 +60,12 @@ class TGCN(torch.nn.Module):
             cached=self.cached,
             add_self_loops=self.add_self_loops,
             normalize=True,
+            # device=context.glContext.config['device']
         )
 
         self.linear_r = torch.nn.Linear(2 * self.out_channels, self.out_channels)
+        # self.linear_r.weight=self.linear_r.weight.to(context.glContext.config['device'])
+        # self.linear_r.bias=self.linear_r.bias.to(context.glContext.config['device'])
 
     def _create_candidate_state_parameters_and_layers(self):
 
@@ -69,10 +75,13 @@ class TGCN(torch.nn.Module):
             improved=self.improved,
             cached=self.cached,
             add_self_loops=self.add_self_loops,
-            normalize=True
+            normalize=True,
+            # device=context.glContext.config['device']
         )
 
         self.linear_h = torch.nn.Linear(2 * self.out_channels, self.out_channels)
+        # self.linear_h.weight=self.linear_h.weight.to(context.glContext.config['device'])
+        # self.linear_h.bias=self.linear_h.bias.to(context.glContext.config['device'])
 
     def _create_parameters_and_layers(self):
         self._create_update_gate_parameters_and_layers()
@@ -155,9 +164,9 @@ class TGCN2(torch.nn.Module):
         add_self_loops (bool): Adding self-loops for smoothing. Default is True.
     """
 
-    def __init__(self, in_channels: int, out_channels: int, 
+    def __init__(self, in_channels: int, out_channels: int,
                  batch_size: int,  # this entry is unnecessary, kept only for backward compatibility
-                 improved: bool = False, cached: bool = False, 
+                 improved: bool = False, cached: bool = False,
                  add_self_loops: bool = True):
         super(TGCN2, self).__init__()
 

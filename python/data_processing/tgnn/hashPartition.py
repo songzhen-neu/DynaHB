@@ -2,9 +2,13 @@
 # data_num = 129
 # write_path='/mnt/data/dataset/england_covid/nodesPartition.hash'+str(worker_num)+'.txt'
 
+# worker_num = 1
+# data_num = 6
+# write_path='/mnt/data/dataset/test/nodesPartition.hash'+str(worker_num)+'.txt'
+
 worker_num = 1
-data_num = 6
-write_path='/mnt/data/dataset/test/nodesPartition.hash'+str(worker_num)+'.txt'
+data_num = 1000
+write_path='/mnt/data/dataset/twitter_tennis/nodesPartition.hash'+str(worker_num)+'.txt'
 
 with open(write_path, 'w') as file:
     write_data = [[] for i in range(worker_num)]

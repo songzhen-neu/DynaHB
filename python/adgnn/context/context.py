@@ -1,5 +1,9 @@
 
-from cmake.build.lib.pb11_ec import *
+# from cmake.build.lib.pb11_ec import *
+from python.pb11_ec import *
+# import ctypes,os
+# BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# pb11_dynahb = ctypes.CDLL(BASE_PATH+'/../../cmake/build/lib/pb11_ec.cpython-39-x86_64-linux-gnu.so')
 
 class Context(object):
     def foo(self):
@@ -9,28 +13,41 @@ class Context(object):
     config = {
         'worker_address': {},
         'id': -1,
-        # 'server_num': 1,
-        'worker_num': 2,
+        # 'ip':"127.0.0.1",
+        # 'ip': "202.199.6.224",
+        'ip':'192.168.1.1',
+        'worker_num': 3,
         'partitionMethod': 'hash',  # hash,metis
         'layer_num': None,
         'emb_dims': [],
-        'iterNum': 500,
-        'lr': 0.01,
-        'print_result_interval': 5,
-        'device': 'cpu',
+        'iterNum': 101,
+        # 'lr': 0.01,
+        'print_result_interval': 10,
+        'device': 'cuda', # cpu,cuda
 
         # optimization switch
         'is_adap_batch':False,
 
         # Dynamic Graphs
-        'data_path':"/mnt/data/dataset/england_covid", #england_covid
-        'feature_dim':8,
-        'data_num':129,
-        'hidden':[8],
+        'data_path':"/mnt/data/dataset/twitter_tennis", #england_covid
+        'feature_dim':16,
+        'data_num':1000,
+        'hidden':[256,256],
         'class_num':1,
-        'train_ratio':0.2,
-        'window_size':1, # 4
-        'batch_size':1, # 32
+        'train_ratio':0.4,
+        'window_size':48, # 48
+        'batch_size':330, # 1000
+        'lr': 0.001,
+
+        # 'data_path':"/mnt/data/dataset/england_covid", #england_covid
+        # 'feature_dim':8,
+        # 'data_num':129,
+        # 'hidden':[8,8],
+        # 'class_num':1,
+        # 'train_ratio':0.2,
+        # 'window_size':10, # 4,10
+        # 'batch_size':64, # 32,64
+        # 'lr': 0.001,
 
 
         # 'data_path':"/mnt/data/dataset/test", #england_covid
@@ -41,6 +58,7 @@ class Context(object):
         # 'train_ratio':0.5,
         # 'window_size':1,
         # 'batch_size':1,
+        # 'lr': 0.01,
 
 
 

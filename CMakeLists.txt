@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 # find protobuf installation, need protobufConfig.cmake
 set(protobuf_MODULE_COMPATIBLE TRUE)
-find_package(Protobuf REQUIRED)
+find_package(Protobuf CONFIG REQUIRED)
 message(STATUS "Using protobuf ${Protobuf_VERSION}")
 
 
@@ -24,6 +24,7 @@ message(STATUS "Using gRPC ${gRPC_VERSION}")
 set(_GRPC_GRPCPP gRPC::grpc++)
 set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
 
+set(CMAKE_PREFIX_PATH "/usr/bin/python3.6" ${CMAKE_PREFIX_PATH})
 find_package(Python COMPONENTS Interpreter Development REQUIRED)
 
 
