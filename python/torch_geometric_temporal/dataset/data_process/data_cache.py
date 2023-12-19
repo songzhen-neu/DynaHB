@@ -4,6 +4,8 @@ from torch_geometric.utils import scatter
 from adgnn.context import context
 import torch.distributed as dist
 
+from adgnn.system_optimization.partition import workloadAwarePartition
+
 
 def _get_target_vertex(dataset):
     dataset.target_vertex = [
@@ -15,7 +17,7 @@ def _calculate_deg(self):
     degs = []
     for i in range(self.snapshot_count):
         # num_nodes = int(self.edges[i].max()) + 1
-        num_nodes=context.glContext.config['data_num']
+        num_nodes = context.glContext.config['data_num']
         row, col = self.edges[i][0], self.edges[i][1]
         deg = scatter(torch.tensor(self.edge_weights[i]), torch.tensor(col), dim=0, dim_size=num_nodes,
                       reduce='sum')
@@ -27,7 +29,8 @@ def _getPartition():
     with open(context.glContext.config['data_path'] + '/nodesPartition.' + context.glContext.config[
         'partitionMethod'] + str(context.glContext.config['worker_num']) + '.txt', 'r') as file:
         # 使用 readlines() 读取文件的所有行并存储在列表中
-        partition_array = [np.array(line.strip().split('\t')) for line in file.readlines()]
+        partition_array = [np.array(line.strip().split('\t')).astype(int) for line in file.readlines()]
+
         return partition_array
 
 
@@ -39,23 +42,35 @@ def _get_nei_unique(edges, target_vertex):
     return nei_unique
 
 
-def _get_v_of_each_layer(self):
-    partition = _getPartition()
+def _show_cal_distribution(graph, partition):
+    edge_degs = workloadAwarePartition.get_edge_degs(graph)
+    for i in range(len(partition)):
+        print(sum(edge_degs[partition[i]]))
+
+
+def _get_v_of_each_layer(graph):
+    if context.glContext.config['partitionMethod'] == 'load_aware':
+        partition = workloadAwarePartition.getPartition(graph)
+    else:
+        partition = _getPartition()
+
+    _show_cal_distribution(graph, partition)
+
     id = context.glContext.config['id']
     layer_num = context.glContext.config['layer_num']
-    local_ids = partition[id].astype(int)
+    local_ids = partition[id]
     target_vertex = [np.array([]) for i in range(layer_num + 1)]
     target_vertex[0] = local_ids
 
     for j in range(layer_num):
         target_vertex[j + 1] = target_vertex[j]
-        for i in range(self.snapshot_count):
-            nei_unique = _get_nei_unique(self.edges[i], target_vertex[j])
+        for i in range(graph.snapshot_count):
+            nei_unique = _get_nei_unique(graph.edges[i], target_vertex[j])
             target_vertex[j + 1] = np.union1d(target_vertex[j + 1], nei_unique)
 
-    for i in range(self.snapshot_count):
+    for i in range(graph.snapshot_count):
         for j in range(layer_num + 1):
-            self.target_vertex[i][j] = target_vertex[j]
+            graph.target_vertex[i][j] = target_vertex[j]
     print('get target vertices of each layer end!!')
 
 
@@ -88,6 +103,11 @@ def _encode(self):
         old2new_maps.append(old2new_tmp)
         self.target_vertex[s] = np.array([old2new_tmp[i] for i in self.target_vertex[s][0]])
         dist.barrier()  # ensure all workers finished the i-th snapshot
+
+    for i in range(workloadAwarePartition.group_size):
+        workloadAwarePartition.div_target_vertex[i] = np.array(
+            [old2new_maps[0][j] for j in workloadAwarePartition.div_target_vertex[i]])
+    dist.barrier()
     self.old2new_maps = old2new_maps
 
 

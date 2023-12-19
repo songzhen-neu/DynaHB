@@ -6,8 +6,6 @@ from python.pb11_ec import *
 # pb11_dynahb = ctypes.CDLL(BASE_PATH+'/../../cmake/build/lib/pb11_ec.cpython-39-x86_64-linux-gnu.so')
 
 class Context(object):
-    def foo(self):
-        pass
 
     ifctx = True
     config = {
@@ -17,28 +15,30 @@ class Context(object):
         # 'ip': "202.199.6.224",
         'ip':'192.168.1.1',
         'worker_num': 3,
-        'partitionMethod': 'hash',  # hash,metis
+        'partitionMethod': 'load_aware',  # hash,metis,load_aware
         'layer_num': None,
         'emb_dims': [],
-        'iterNum': 101,
+        'iterNum': 2001,
         # 'lr': 0.01,
         'print_result_interval': 10,
         'device': 'cuda', # cpu,cuda
 
         # optimization switch
-        'is_adap_batch':False,
+        'is_adap_batch':True,
+        'is_batch_pool':True,
+        'dist_mode':'asyn', # asyn, sync
+
 
         # Dynamic Graphs
         'data_path':"/mnt/data/dataset/twitter_tennis", #england_covid
         'feature_dim':16,
         'data_num':1000,
-        'hidden':[256,256],
+        'hidden':[16,16],
         'class_num':1,
         'train_ratio':0.4,
-        'window_size':48, # 48
-        'batch_size':330, # 1000
-        'lr': 0.001,
-
+        'window_size':16, # 48,-1
+        'batch_size':128, # 1000,-1
+        'lr': 0.01
         # 'data_path':"/mnt/data/dataset/england_covid", #england_covid
         # 'feature_dim':8,
         # 'data_num':129,

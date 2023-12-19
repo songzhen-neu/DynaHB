@@ -5,6 +5,7 @@ from torch_geometric.data import Data
 # from adgnn.context.context import glContext
 import torch.distributed as dist
 import adgnn.context.context as context
+from adgnn.system_optimization.partition import workloadAwarePartition
 
 Edges = Sequence[Union[np.ndarray, list, None]]
 Edge_Weights = Sequence[Union[np.ndarray, list, None]]
@@ -140,12 +141,43 @@ class DynamicGraphTemporalSignal(object):
             [[o2n_map.get(value, value) for value in row] for row in edge])
         return torch.LongTensor(encode_edge)
 
-    def _get_v_of_each_layer(self, batch_size, window_id, window_size):
+    def _get_random_batch(self, batch_size, window_id, window_size):
         layer_num = context.glContext.config['layer_num']
         target_vertex_batch = []
         target_vertex = [np.array([]) for i in range(layer_num + 1)]
-        target_vertex[0] = np.random.choice(self.target_vertex[0], size=batch_size, replace=False)
+
+        if context.glContext.config['partitionMethod'] == 'load_aware':
+            group_size = workloadAwarePartition.group_size
+            group_batch_size = int(batch_size / group_size)
+
+            if group_batch_size == 0:
+                exit('batch_size should be more than group_size')
+            for i in range(group_size):
+                random_target_tmp = np.random.choice(workloadAwarePartition.div_target_vertex[i], size=group_batch_size,
+                                                     replace=False)
+                target_vertex[0] = np.concatenate((target_vertex[0], random_target_tmp))
+        else:
+            target_vertex[0] = np.random.choice(self.target_vertex[0], size=batch_size, replace=False)
         # target_vertex[0]=self.target_vertex[0]
+        for j in range(layer_num):
+            target_vertex[j + 1] = target_vertex[j]
+            for i in range(window_id, window_id + window_size, 1):
+                snapshot = self[i]
+                nei_unique = self._get_nei_unique(snapshot.edge, target_vertex[j])
+                target_vertex[j + 1] = np.concatenate((target_vertex[j + 1], nei_unique), axis=0)
+
+        for i in range(window_id, window_id + window_size, 1):
+            target_vertex_batch.append(target_vertex)
+
+        return target_vertex_batch
+
+    def _get_test_full(self, window_id, window_size):
+        layer_num = context.glContext.config['layer_num']
+        target_vertex_batch = []
+        target_vertex = [np.array([]) for i in range(layer_num + 1)]
+
+        # target_vertex[0] = np.random.choice(self.target_vertex[0], size=batch_size, replace=False)
+        target_vertex[0] = self.target_vertex[0]
         for j in range(layer_num):
             target_vertex[j + 1] = target_vertex[j]
             for i in range(window_id, window_id + window_size, 1):
@@ -164,7 +196,7 @@ class DynamicGraphTemporalSignal(object):
         edge_weight_batch = []
         feature_batch = []
         target_batch = []
-        target_vertex_batch = self._get_v_of_each_layer(len(self.target_vertex[0]), 0, self.snapshot_count)
+        target_vertex_batch = self._get_test_full(0, self.snapshot_count)
         deg_batch = []
 
         for i in range(self.snapshot_count):
@@ -199,16 +231,16 @@ class DynamicGraphTemporalSignal(object):
             return
         if device == 'cuda':
             for i in range(len(self.features)):
-                self.features[i]=self.features[i].to(device)
+                self.features[i] = self.features[i].to(device)
                 self.targets[i] = self.targets[i].to(device)
                 for j in range(len(self.degs[i])):
-                    self.degs[i][j]=self.degs[i][j].to(device)
+                    self.degs[i][j] = self.degs[i][j].to(device)
                 for j in range(len(self.edge_weights[i])):
-                    self.edge_weights[i][j]=self.edge_weights[i][j].to(device)
+                    self.edge_weights[i][j] = self.edge_weights[i][j].to(device)
                 for j in range(len(self.edges[i])):
-                    self.edges[i][j]=self.edges[i][j].to(device)
+                    self.edges[i][j] = self.edges[i][j].to(device)
 
-    def generate_batch(self, window_id):
+    def get_batch(self, window_id):
         batch_size = context.glContext.config['batch_size']
         window_size = context.glContext.config['window_size']
         layer_num = context.glContext.config['layer_num']
@@ -216,7 +248,7 @@ class DynamicGraphTemporalSignal(object):
         edge_weight_batch = []
         feature_batch = []
         target_batch = []
-        target_vertex_batch = self._get_v_of_each_layer(batch_size, window_id, window_size)
+        target_vertex_batch = self._get_random_batch(batch_size, window_id, window_size)
         deg_batch = []
 
         for i in range(window_id, window_id + window_size, 1):

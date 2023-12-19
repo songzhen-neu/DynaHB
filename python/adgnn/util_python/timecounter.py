@@ -23,9 +23,9 @@ class TimeCounter():
     def show(self, key):
         print((key + ' time: {:.4f}').format(self.time_list[key][-1]))
 
-    def printAvrgTime(self):
+    def printAvrgTime(self,end_epoch):
         for id in self.time_list.keys():
-            print('average ' + str(id) + ' time: {:.4f}s'.format(np.array(self.time_list[id]).mean()))
+            print('average ' + str(id) + ' time: {:.4f}s'.format(np.array(self.time_list[id][:end_epoch]).mean()))
 
     def printTotalTime(self):
         for id in self.time_list.keys():

@@ -149,6 +149,8 @@ class TwitterTennisDatasetLoader(object):
         # dataset = DynamicGraphTemporalSignal(
         #     self.edges, self.edge_weights, self.features, self.targets
         # )
+
+
         start_cache(self)
 
         dataset = DynamicGraphTemporalSignal(self.edges, self.edge_weights, self.features, self.targets,
