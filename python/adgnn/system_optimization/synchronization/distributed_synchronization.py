@@ -25,7 +25,7 @@ SynchronousModel = DistributedSynchronization()
 class DistributedAsynchronization:
     model = None
     start_time = None
-    time_update = 1
+    time_update = context.glContext.config['time_update']
     min_cost = [100000, 0]
 
     def __call__(self, model):

@@ -1,11 +1,15 @@
 import time
 import numpy as np
 from adgnn.context import context
+import psutil,os
 
 class TimeCounter():
+
     def __init__(self):
         self.time_list = {}
         self.start_time = {}
+        self.single_time={}
+
 
     # def clear_time(self):
     #     for id in context.glContext.time_epoch.keys():
@@ -30,5 +34,17 @@ class TimeCounter():
     def printTotalTime(self):
         for id in self.time_list.keys():
             print('total ' + str(id) + ' time: {:.4f}s'.format(np.array(self.time_list[id]).sum()))
+
+    def getMemory(self):
+        process = psutil.Process(os.getpid())
+        memory_info = process.memory_info()
+        return '{:.2f}MB'.format(memory_info.rss / (1024 * 1024))
+
+    def start_single(self,key):
+        self.single_time[key]=time.time()
+        print(key+' start: {0}'.format(self.getMemory()))
+
+    def end_single(self,key):
+        print(key + ' end:{0}, {1:.4f}s'.format(self.getMemory(),time.time()-self.single_time[key]))
 
 time_counter = TimeCounter()

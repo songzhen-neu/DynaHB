@@ -2,6 +2,7 @@ import math
 import torch
 from torch_geometric.utils import to_dense_adj, dense_to_sparse
 from torch_geometric.nn.conv import MessagePassing
+from torch_geometric.utils import add_remaining_self_loops
 
 
 class DConv(MessagePassing):
@@ -56,6 +57,8 @@ class DConv(MessagePassing):
         Return types:
             * **H** (PyTorch Float Tensor) - Hidden state matrix for all nodes.
         """
+
+
         adj_mat = to_dense_adj(edge_index, edge_attr=edge_weight)
         adj_mat = adj_mat.reshape(adj_mat.size(1), adj_mat.size(2))
         deg_out = torch.matmul(
@@ -169,19 +172,19 @@ class DCRNN(torch.nn.Module):
             H = torch.zeros(X.shape[0], self.out_channels).to(X.device)
         return H
 
-    def _calculate_update_gate(self, X, edge_index, edge_weight, H):
+    def _calculate_update_gate(self, X, edge_index, edge_weight, H,target_num):
         Z = torch.cat([X, H], dim=1)
         Z = self.conv_x_z(Z, edge_index, edge_weight)
         Z = torch.sigmoid(Z)
         return Z
 
-    def _calculate_reset_gate(self, X, edge_index, edge_weight, H):
+    def _calculate_reset_gate(self, X, edge_index, edge_weight, H,target_num):
         R = torch.cat([X, H], dim=1)
         R = self.conv_x_r(R, edge_index, edge_weight)
         R = torch.sigmoid(R)
         return R
 
-    def _calculate_candidate_state(self, X, edge_index, edge_weight, H, R):
+    def _calculate_candidate_state(self, X, edge_index, edge_weight, H, R,target_num):
         H_tilde = torch.cat([X, H * R], dim=1)
         H_tilde = self.conv_x_h(H_tilde, edge_index, edge_weight)
         H_tilde = torch.tanh(H_tilde)
@@ -194,6 +197,8 @@ class DCRNN(torch.nn.Module):
     def forward(
         self,
         X: torch.FloatTensor,
+        target_num: int,
+        deg: torch.FloatTensor,
         edge_index: torch.LongTensor,
         edge_weight: torch.FloatTensor = None,
         H: torch.FloatTensor = None,
@@ -212,8 +217,8 @@ class DCRNN(torch.nn.Module):
             * **H** (PyTorch Float Tensor) - Hidden state matrix for all nodes.
         """
         H = self._set_hidden_state(X, H)
-        Z = self._calculate_update_gate(X, edge_index, edge_weight, H)
-        R = self._calculate_reset_gate(X, edge_index, edge_weight, H)
-        H_tilde = self._calculate_candidate_state(X, edge_index, edge_weight, H, R)
+        Z = self._calculate_update_gate(X, edge_index, edge_weight, H,target_num)
+        R = self._calculate_reset_gate(X, edge_index, edge_weight, H,target_num)
+        H_tilde = self._calculate_candidate_state(X, edge_index, edge_weight, H, R,target_num)
         H = self._calculate_hidden_state(Z, H, H_tilde)
-        return H
+        return H[0:target_num,:]

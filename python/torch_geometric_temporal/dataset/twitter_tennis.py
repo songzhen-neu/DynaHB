@@ -87,18 +87,22 @@ class TwitterTennisDatasetLoader(object):
         local_file_path = "/mnt/data/dataset/twitter_tennis/" + fname
         with open(local_file_path, "r") as file:
             self._dataset = json.load(file)
+        print('get dataset end!')
 
     def _get_edges(self):
         edge_indices = []
         self.edges = []
+        self.edge_num=0
         for time in range(self._dataset["time_periods"]):
             E = np.array(self._dataset[str(time)]["edges"])
-            if self.N != None:
-                selector = np.where((E[:, 0] < self.N) & (E[:, 1] < self.N))
-                E = E[selector]
-                edge_indices.append(selector)
+            # if self.N != None:
+            #     selector = np.where((E[:, 0] < self.N) & (E[:, 1] < self.N))
+            #     E = E[selector]
+            #     edge_indices.append(selector)
+            self.edge_num+=E.shape[0]
             self.edges.append(E.T)
         self.edge_indices = edge_indices
+
 
     def _get_edge_weights(self):
         edge_indices = self.edge_indices
@@ -113,13 +117,14 @@ class TwitterTennisDatasetLoader(object):
         self.features = []
         for time in range(self._dataset["time_periods"]):
             X = np.array(self._dataset[str(time)]["X"])
-            if self.N != None:
-                X = X[: self.N]
+            # if self.N != None:
+            #     X = X[: self.N]
             if self.feature_mode == "diagonal":
                 X = np.identity(X.shape[0])
             elif self.feature_mode == "encoded":
                 X = encode_features(X)
             self.features.append(X)
+        self.vertex_num =self.features[0].shape[0]
 
     def _get_targets(self):
         self.targets = []
@@ -130,8 +135,8 @@ class TwitterTennisDatasetLoader(object):
             y = np.array(self._dataset[str(snapshot_id)]["y"])
             # logarithmic transformation for node degrees
             y = np.log(1.0 + y)
-            if self.N != None:
-                y = y[: self.N]
+            # if self.N != None:
+            #     y = y[: self.N]
             self.targets.append(y)
 
     def get_dataset(self,lags=0) -> DynamicGraphTemporalSignal:
@@ -146,6 +151,9 @@ class TwitterTennisDatasetLoader(object):
         self._get_edge_weights()
         self._get_features()
         self._get_targets()
+
+        print('vertex_num:{0}, edge_num:{1}, snapshot_num:{2}'.format(self.vertex_num,self.edge_num,self.snapshot_count))
+
         # dataset = DynamicGraphTemporalSignal(
         #     self.edges, self.edge_weights, self.features, self.targets
         # )

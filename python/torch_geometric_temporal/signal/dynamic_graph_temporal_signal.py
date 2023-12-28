@@ -12,9 +12,9 @@ Edge_Weights = Sequence[Union[np.ndarray, list, None]]
 Node_Features = Sequence[Union[np.ndarray, None]]
 Targets = Sequence[Union[np.ndarray, None]]
 Additional_Features = Sequence[np.ndarray]
-Old2New_Maps = Sequence[Union[dict, None]]
+# Old2New_Maps = Sequence[Union[dict, None]]
 Degs = Sequence[Union[np.ndarray, list, None]]
-Target_Vertex = Sequence[Union[dict, list, None]]
+# Target_Vertex = Sequence[Union[dict, list, None]]
 
 
 class DynamicGraphTemporalSignal(object):
@@ -39,9 +39,9 @@ class DynamicGraphTemporalSignal(object):
             edge_weights: Edge_Weights,
             features: Node_Features,
             targets: Targets,
-            target_vertex: Target_Vertex,
+            target_vertex,
             degs: Degs,
-            old2new_maps: Old2New_Maps,
+            old2new_maps,
             **kwargs: Additional_Features
     ):
         self.edges = edges
@@ -115,20 +115,22 @@ class DynamicGraphTemporalSignal(object):
         }
         return additional_features
 
-    def _get_old2new_maps(self, time_index: int):
+    def _get_old2new_maps(self):
         if self.old2new_maps is None:
             return None
         else:
-            return self.old2new_maps[time_index]
+            return self.old2new_maps
 
-    def _get_target_vertex(self, time_index: int):
-        return self.target_vertex[time_index]
+    def _get_target_vertex(self):
+        return self.target_vertex
 
-    def _get_nei_unique(self, edges, target_vertex):
+    def _get_nei_unique(self, edges, target_vertex, target_vertex_next_hop):
         mask_nei = np.isin(edges[1], target_vertex)
         neis = np.unique(edges[0][mask_nei])
         mask_nei_not_in_target = ~np.isin(neis, target_vertex)
-        nei_unique = neis[mask_nei_not_in_target]
+        neis = neis[mask_nei_not_in_target]
+        mask_nei_not_in_next= ~np.isin(neis, target_vertex_next_hop)
+        nei_unique = neis[mask_nei_not_in_next]
         return nei_unique
 
     def _get_edge_and_edgeweight_by_target(self, target_vertex, edge, edge_weight):
@@ -157,13 +159,13 @@ class DynamicGraphTemporalSignal(object):
                                                      replace=False)
                 target_vertex[0] = np.concatenate((target_vertex[0], random_target_tmp))
         else:
-            target_vertex[0] = np.random.choice(self.target_vertex[0], size=batch_size, replace=False)
+            target_vertex[0] = np.random.choice(self.target_vertex, size=batch_size, replace=False)
         # target_vertex[0]=self.target_vertex[0]
         for j in range(layer_num):
             target_vertex[j + 1] = target_vertex[j]
             for i in range(window_id, window_id + window_size, 1):
                 snapshot = self[i]
-                nei_unique = self._get_nei_unique(snapshot.edge, target_vertex[j])
+                nei_unique = self._get_nei_unique(snapshot.edge, target_vertex[j], target_vertex[j+1])
                 target_vertex[j + 1] = np.concatenate((target_vertex[j + 1], nei_unique), axis=0)
 
         for i in range(window_id, window_id + window_size, 1):
@@ -177,12 +179,12 @@ class DynamicGraphTemporalSignal(object):
         target_vertex = [np.array([]) for i in range(layer_num + 1)]
 
         # target_vertex[0] = np.random.choice(self.target_vertex[0], size=batch_size, replace=False)
-        target_vertex[0] = self.target_vertex[0]
+        target_vertex[0] = self.target_vertex
         for j in range(layer_num):
             target_vertex[j + 1] = target_vertex[j]
             for i in range(window_id, window_id + window_size, 1):
                 snapshot = self[i]
-                nei_unique = self._get_nei_unique(snapshot.edge, target_vertex[j])
+                nei_unique = self._get_nei_unique(snapshot.edge, target_vertex[j],target_vertex[j+1])
                 target_vertex[j + 1] = np.concatenate((target_vertex[j + 1], nei_unique), axis=0)
 
         for i in range(window_id, window_id + window_size, 1):
@@ -285,9 +287,9 @@ class DynamicGraphTemporalSignal(object):
                 self.edge_weights[time_index],
                 self.features[time_index],
                 self.targets[time_index],
-                self.target_vertex[time_index],
+                self.target_vertex,
                 self.degs[time_index],
-                self.old2new_maps[time_index],
+                self.old2new_maps,
                 **{key: getattr(self, key)[time_index] for key in self.additional_feature_keys}
             )
         else:
@@ -296,9 +298,9 @@ class DynamicGraphTemporalSignal(object):
             edge_weight = self._get_edge_weights(time_index)
             x = self._get_features(time_index)
             y = self._get_target(time_index)
-            target_vertex = self._get_target_vertex(time_index)
+            target_vertex = self._get_target_vertex()
             deg = self._get_deg(time_index)
-            old2new_map = self._get_old2new_maps(time_index)
+            old2new_map = self._get_old2new_maps()
             additional_features = self._get_additional_features(time_index)
 
             snapshot = Data(x=x, edge=edge, edge_weight=edge_weight,

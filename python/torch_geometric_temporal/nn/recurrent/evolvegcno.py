@@ -7,8 +7,8 @@ from torch_geometric.typing import Adj, OptTensor
 from torch_sparse import SparseTensor
 from torch_geometric.nn.inits import glorot
 from torch_geometric.nn.conv import MessagePassing
-from torch_geometric.nn.conv.gcn_conv import gcn_norm
-
+from torch_geometric_temporal.nn.conv.gcn_conv import gcn_norm
+# from torch_geometric.nn.conv.gcn_conv import gcn_norm
 
 class GCNConv_Fixed_W(MessagePassing):
     r"""The graph convolutional operator adapted from the `"Semi-supervised
@@ -57,7 +57,7 @@ class GCNConv_Fixed_W(MessagePassing):
     def __init__(self, in_channels: int, out_channels: int,
                  improved: bool = False, cached: bool = False,
                  add_self_loops: bool = True, normalize: bool = True,
-                **kwargs):
+                 **kwargs):
 
         kwargs.setdefault('aggr', 'add')
         super(GCNConv_Fixed_W, self).__init__(**kwargs)
@@ -79,15 +79,19 @@ class GCNConv_Fixed_W(MessagePassing):
         self._cached_adj_t = None
 
     def forward(self, W: torch.FloatTensor, x: Tensor, edge_index: Adj,
-                edge_weight: OptTensor = None) -> Tensor:
+                edge_weight: OptTensor = None, deg: Tensor = None) -> Tensor:
         """"""
 
         if self.normalize:
             cache = self._cached_edge_index
             if cache is None:
+                # edge_index, edge_weight = gcn_norm(  # yapf: disable
+                #     edge_index, edge_weight, x.size(self.node_dim),
+                #     self.improved, self.add_self_loops)
+
                 edge_index, edge_weight = gcn_norm(  # yapf: disable
                     edge_index, edge_weight, x.size(self.node_dim),
-                    self.improved, self.add_self_loops)
+                    self.improved, self.add_self_loops, 'source_to_target', x.dtype, deg)
 
         x = torch.matmul(x, W)
 
@@ -99,7 +103,6 @@ class GCNConv_Fixed_W(MessagePassing):
 
     def message(self, x_j: Tensor, edge_weight: OptTensor) -> Tensor:
         return x_j if edge_weight is None else edge_weight.view(-1, 1) * x_j
-
 
 
 class EvolveGCNO(torch.nn.Module):
@@ -124,12 +127,12 @@ class EvolveGCNO(torch.nn.Module):
     """
 
     def __init__(
-        self,
-        in_channels: int,
-        improved: bool = False,
-        cached: bool = False,
-        normalize: bool = True,
-        add_self_loops: bool = True,
+            self,
+            in_channels: int,
+            improved: bool = False,
+            cached: bool = False,
+            normalize: bool = True,
+            add_self_loops: bool = True,
     ):
         super(EvolveGCNO, self).__init__()
 
@@ -142,7 +145,7 @@ class EvolveGCNO(torch.nn.Module):
         self.weight = None
         self._create_layers()
         self.reset_parameters()
-    
+
     def reset_parameters(self):
         glorot(self.initial_weight)
 
@@ -168,10 +171,12 @@ class EvolveGCNO(torch.nn.Module):
         )
 
     def forward(
-        self,
-        X: torch.FloatTensor,
-        edge_index: torch.LongTensor,
-        edge_weight: torch.FloatTensor = None,
+            self,
+            X: torch.FloatTensor,
+            target_num: int,
+            deg: torch.FloatTensor,
+            edge_index: torch.LongTensor,
+            edge_weight: torch.FloatTensor = None,
     ) -> torch.FloatTensor:
         """
         Making a forward pass.
@@ -182,10 +187,11 @@ class EvolveGCNO(torch.nn.Module):
         Return types:
             * **X** *(PyTorch Float Tensor)* - Output matrix for all nodes.
         """
-        
+
         if self.weight is None:
             _, self.weight = self.recurrent_layer(self.initial_weight, self.initial_weight)
         else:
             _, self.weight = self.recurrent_layer(self.weight, self.weight)
-        X = self.conv_layer(self.weight.squeeze(dim=0), X, edge_index, edge_weight)
+        self.weight = self.weight.detach()
+        X = self.conv_layer(self.weight.squeeze(dim=0), X, edge_index, edge_weight, deg)[:target_num]
         return X

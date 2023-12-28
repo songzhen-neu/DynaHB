@@ -20,7 +20,8 @@ class Context(object):
         'emb_dims': [],
         'iterNum': 2001,
         # 'lr': 0.01,
-        'print_result_interval': 10,
+        # 'print_result_interval': 10,
+        'time_update':10,
         'device': 'cuda', # cpu,cuda
 
         # optimization switch
@@ -30,15 +31,71 @@ class Context(object):
 
 
         # Dynamic Graphs
-        'data_path':"/mnt/data/dataset/twitter_tennis", #england_covid
-        'feature_dim':16,
-        'data_num':1000,
-        'hidden':[16,16],
-        'class_num':1,
-        'train_ratio':0.4,
-        'window_size':16, # 48,-1
-        'batch_size':128, # 1000,-1
-        'lr': 0.01
+        # 'data_path': "/mnt/data/dataset/ia_slashdot_reply_dir",  # 51k,140k
+        # 'feature_dim': 2,
+        # 'data_num': 51083,
+        # 'hidden': [16,16],
+        # 'class_num': 1,
+        # 'train_ratio': 0.4,
+        # # 'window_size': 24,  # 57,143
+        # # 'batch_size': 17027,  # 17027,51083
+        # 'window_size': 10,  # 57,143
+        # 'batch_size': 17027,  # 17027,51083
+        # 'lr': 0.001
+
+        # 'data_path': "/mnt/data/dataset/soc_bitcoin",  # edge 122948162, vertex_num 24575382
+        # 'feature_dim': 2,
+        # 'data_num': 24575382,
+        # 'hidden': [2],
+        # 'class_num': 1,
+        # 'train_ratio': 0.8,
+        # 'window_size': 10,  # 57,143
+        # 'batch_size': 17027,  # 17027,51083
+        # 'lr': 0.001
+
+        # 'data_path': "/mnt/data/dataset/soc_flickr_growth",  # england_covid
+        # 'feature_dim': 2,
+        # 'data_num': 2302925,
+        # 'hidden': [8],
+        # 'class_num': 1,
+        # 'train_ratio': 0.4,
+        # 'window_size': 30,  # 132
+        # 'batch_size': 17027,  # 2302925
+        # 'lr': 0.001
+
+        # 'data_path': "/mnt/data/dataset/rec_amazon_ratings",  # snapshots:100, edge_num:5838038,vertex_num:2146057
+        # 'feature_dim': 2,
+        # 'data_num': 2146057,
+        # 'hidden': [8],
+        # 'class_num': 1,
+        # 'train_ratio': 0.4,
+        # 'window_size': 30,  # 132
+        # 'batch_size': 17027,  # 2302925
+        # 'lr': 0.001
+
+        'data_path': "/mnt/data/dataset/soc_youtube_growth",  # snapshots:100, edge_num:5838038,vertex_num:2146057
+        'feature_dim': 2,
+        'data_num': 2146057,
+        'hidden': [8],
+        'class_num': 1,
+        'train_ratio': 0.4,
+        'window_size': 30,  # 132
+        'batch_size': 17027,  # 2302925
+        'lr': 0.001
+
+
+        # 'data_path':"/mnt/data/dataset/twitter_tennis", #england_covid
+        # 'feature_dim':16,
+        # 'data_num':1000,
+        # 'hidden':[16],
+        # 'class_num':1,
+        # 'train_ratio':0.4,
+        # 'window_size':16, # 48,-1
+        # 'batch_size':128, # 1000,-1
+        # 'lr': 0.01
+
+
+
         # 'data_path':"/mnt/data/dataset/england_covid", #england_covid
         # 'feature_dim':8,
         # 'data_num':129,

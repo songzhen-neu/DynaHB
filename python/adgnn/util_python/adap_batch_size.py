@@ -412,18 +412,20 @@ class AdapRLTuner:
         return self.__action_trans
 
     def init_adap(self, test_dataset, model):
-        model.eval()
-        hidden_state = [None for i in range(len(context.glContext.config['hidden']))]
-        cost_test = 0
-        for time, snapshot in enumerate(test_dataset):
-            y_hat, hidden_state = model(snapshot.x, snapshot.edge, snapshot.edge_weight, hidden_state,
-                                        snapshot.deg)
-            cost_test = cost_test + torch.mean((y_hat.view(-1) - snapshot.y) ** 2)
-        cost_test = cost_test / (time + 1)
+        with torch.no_grad():
+            model.to('cpu')
+            hidden_state = [None for i in range(len(context.glContext.config['hidden']))]
+            cost_test = 0
+            for time, snapshot in enumerate(test_dataset):
+                y_hat, hidden_state = model(snapshot.x, snapshot.edge, snapshot.edge_weight, hidden_state,
+                                            snapshot.deg)
+                cost_test = cost_test + torch.mean((y_hat.view(-1) - snapshot.y) ** 2)
+            cost_test = cost_test / (time + 1)
 
-        test_num = test_dataset.target_vertex[0][0].shape[0]
-        acc_avrg = getAccAvrg([1, test_num], [1, cost_test])
-        self.__loss_lst = acc_avrg['test']
+            test_num = test_dataset.target_vertex[0][0].shape[0]
+            acc_avrg = getAccAvrg([1, test_num], [1, cost_test])
+            self.__loss_lst = acc_avrg['test']
+            model.to(context.glContext.config['device'])
 
     # def trans_to_size(self, action_div):
     #     window_size = int(context.glContext.config['window_size'] * action_div[0])
