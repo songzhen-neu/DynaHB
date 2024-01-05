@@ -79,7 +79,7 @@ class SocBitcoinDatasetLoader(object):
         self.N = vertex_num
 
         for i in range(window):
-            time_counter.start_single('processed_window_' + str(i))
+            # time_counter.start_single('processed_window_' + str(i))
             mask = (start_id + i * time_itv <= timestamps) & (timestamps < start_id + (i + 1) * time_itv)
             edge_snapshots[i] = np.array([source_vertices_mapped[mask], target_vertices_mapped[mask]])
 
@@ -90,7 +90,7 @@ class SocBitcoinDatasetLoader(object):
             # edge_snapshots[i] = edge_snapshots[i].detach().numpy()
             # edge_weight_snapshots[i] = edge_weight_snapshots[i].detach().numpy()
 
-            time_counter.end_single('processed_window_' + str(i))
+            # time_counter.end_single('processed_window_' + str(i))
 
         # edge_snapshots = [arr for arr in edge_snapshots if arr.size > 0]
 
@@ -147,3 +147,12 @@ class SocBitcoinDatasetLoader(object):
         time_counter.end_single('get_dataset')
         return dataset
 
+    def get_global_dataset(self, lags=0) -> DynamicGraphTemporalSignal:
+        time_counter.start_single('get_dataset')
+        self._get_features()
+        self._get_targets()
+
+        dataset = DynamicGraphTemporalSignal(self.edges, self.edge_weights, self.features, self.targets,
+                                             self.target_vertex, self.degs, self.old2new_maps)
+        time_counter.end_single('get_dataset')
+        return dataset

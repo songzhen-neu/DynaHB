@@ -25,12 +25,16 @@ import adgnn.util_python.adap_batch_size as adap
 
 from torch.nn.parallel import DistributedDataParallel
 
-from torch_geometric_temporal.dataset import ChickenpoxDatasetLoader
-from torch_geometric_temporal.dataset import TwitterTennisDatasetLoader
 
+from torch_geometric_temporal.dataset import TwitterTennisDatasetLoader
+from torch_geometric_temporal.dataset import IaSlashdotReplyDirDatasetLoader
+from torch_geometric_temporal.dataset import SocFlickrGrowthDatasetLoader
+from torch_geometric_temporal.dataset import SocBitcoinDatasetLoader
 from torch_geometric_temporal.signal import temporal_signal_split
-from torch_geometric_temporal.dataset import EnglandCovidDatasetLoader
 from torch_geometric_temporal.dataset import TestDatasetLoader
+from torch_geometric_temporal.dataset import RecAmazonRatingsDatasetLoader
+from torch_geometric_temporal.dataset import SocYoutubeGrowthDatasetLoader
+from torch_geometric_temporal.dataset import RecAmzBooksDatasetLoader
 
 from adgnn.util_python.timecounter import time_counter
 from adgnn.system_optimization.batch_generate import batchGenerator
@@ -40,7 +44,7 @@ import random
 from adgnn.util_python.get_distributed_acc import getAccAvrg
 import time as tm
 from adgnn.system_optimization.synchronization.distributed_synchronization import SynchronousModel, AsynchronousModel
-
+from adgnn.util_python.test_model import test_model
 torch.set_printoptions(4)
 torch.manual_seed(42)
 np.random.seed(42)
@@ -57,23 +61,34 @@ torch.set_num_threads(int(num_threads / context.glContext.config['worker_num']))
 print(f"PyTorch version: {torch.__version__}")
 
 
+
+
+
+
 def buildInitGraph():
     loader = None
-
     if context.glContext.config['data_path'].__contains__('test'):
         loader = TestDatasetLoader()
-    elif context.glContext.config['data_path'].__contains__('england_covid'):
-        loader = EnglandCovidDatasetLoader()
     elif context.glContext.config['data_path'].__contains__('twitter_tennis'):
         loader = TwitterTennisDatasetLoader()
+    elif context.glContext.config['data_path'].__contains__('ia-slashdot-reply-dir'):
+        loader = IaSlashdotReplyDirDatasetLoader()
+    elif context.glContext.config['data_path'].__contains__('soc-flickr-growth'):
+        loader = SocFlickrGrowthDatasetLoader()
+    elif context.glContext.config['data_path'].__contains__('soc-bitcoin'):
+        loader = SocBitcoinDatasetLoader()
+    elif context.glContext.config['data_path'].__contains__('rec-amazon-ratings'):
+        loader = RecAmazonRatingsDatasetLoader()
+    elif context.glContext.config['data_path'].__contains__('soc-youtube-growth'):
+        loader = SocYoutubeGrowthDatasetLoader()
+    elif context.glContext.config['data_path'].__contains__('rec-amz-Books'):
+        loader = RecAmzBooksDatasetLoader()
 
     dataset = loader.get_dataset(lags=context.glContext.config['feature_dim'])
-
     train_dataset, test_dataset = temporal_signal_split(dataset, train_ratio=context.glContext.config['train_ratio'])
     context.glContext.config['snap_num_train'] = train_dataset.snapshot_count
-    context.glContext.config['data_num_local'] = len(train_dataset.target_vertex[0])
+    context.glContext.config['data_num_local'] = len(train_dataset.target_vertex)
     return train_dataset, test_dataset
-
 
 class RecurrentGCN(torch.nn.Module):
     def __init__(self, node_features):
@@ -124,19 +139,19 @@ class RecurrentGCN(torch.nn.Module):
 #         return y, hidden
 
 
-def test_model(model, test_dataset):
-    cost_test = 0
-    model.eval()
-    # model.train()
-    hidden_state = [None for i in range(len(context.glContext.config['hidden']))]
-    for time, snapshot in enumerate(test_dataset):
-        y_hat, hidden_state = model(snapshot.x, snapshot.edge, snapshot.edge_weight, hidden_state,
-                                    snapshot.deg)
-        cost_test = cost_test + torch.mean((y_hat.view(-1) - snapshot.y) ** 2)
-    cost_test = cost_test / (time + 1)
-
-    test_num = test_dataset.target_vertex[0][0].shape[0]
-    return test_num, cost_test
+# def test_model(model, test_dataset):
+#     cost_test = 0
+#     model.eval()
+#     # model.train()
+#     hidden_state = [None for i in range(len(context.glContext.config['hidden']))]
+#     for time, snapshot in enumerate(test_dataset):
+#         y_hat, hidden_state = model(snapshot.x, snapshot.edge, snapshot.edge_weight, hidden_state,
+#                                     snapshot.deg)
+#         cost_test = cost_test + torch.mean((y_hat.view(-1) - snapshot.y) ** 2)
+#     cost_test = cost_test / (time + 1)
+#
+#     test_num = test_dataset.target_vertex[0][0].shape[0]
+#     return test_num, cost_test
 
 
 def avrg_model(model):
@@ -184,7 +199,7 @@ class TGCN_Engine(Engine):
 
         epoch_count = 0
 
-        test_dataset.to_device(context.glContext.config['device'])
+        # test_dataset.to_device(context.glContext.config['device'])
         # initial test loss
         if context.glContext.config['is_adap_batch']:
             adap_rl.init_adap(test_dataset, model)
@@ -215,9 +230,9 @@ class TGCN_Engine(Engine):
             if epoch_count == 0:
                 AsynchronousModel.start_time = tm.time()
 
-            if context.glContext.config['dist_mode'] == 'sync':
-                dist.barrier()
-            if (tm.time() - AsynchronousModel.start_time) / AsynchronousModel.time_update >= 1 or epoch_count == 0:
+            # if context.glContext.config['dist_mode'] == 'sync':
+            #     dist.barrier()
+            if (tm.time() - AsynchronousModel.start_time) / AsynchronousModel.time_update >= 1 or epoch_count == 0 or context.glContext.config['dist_mode'] == 'sync':
 
                 if context.glContext.config['dist_mode'] == 'asyn':
                     avrg_model(model)
@@ -236,13 +251,16 @@ class TGCN_Engine(Engine):
                 print('Epoch: {:04d}'.format(epoch + 1),
                       'cost_train: {:.8f}'.format(acc_avrg['train']),
                       'cost_test: {:.8f}'.format(acc_avrg['test']),
-                      'time:{:.4f}'.format(time_counter.time_list['batch_time'][-1]))
+                      'time:{:.4f}'.format(time_counter.time_list['batch_time'][-1]),
+                      'total_time: {:.4f}'.format(time_counter.get_total_time('batch_time')))
                 if acc_avrg['test'] < min_cost[0] and acc_avrg['test'] != 0:
                     min_cost[0] = acc_avrg['test']
                     min_cost[1] = epoch
                     min_cost[2] = epoch_count
                 if epoch_count - min_cost[2] >= 10:
                     break
+                if context.glContext.config['dist_mode'] == 'sync':
+                    dist.barrier()
                 AsynchronousModel.start_time = tm.time()
                 epoch_count += 1
 

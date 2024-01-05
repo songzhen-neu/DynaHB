@@ -382,9 +382,12 @@ class AdapRLTuner:
         #                           range(1, context.glContext.config['snap_num_train'])]  # [1,2,3,4,5,6,7,8,9,10]
         # self.__window_size_set = [pow(2, i) for i in range(0, int(
         #     np.log2(context.glContext.config['snap_num_train'])) + 1)]  # [1,2,4,8]
-        self.__window_size_set = [2, 8, 16, 32]
-        # self.__window_size_set.append(context.glContext.config['snap_num_train'])
-        self.__vertex_size_set = [32, 128, 256]
+        # self.__window_size_set = [2, 8, 16, 32]
+        # self.__vertex_size_set = [32, 256, 1024]
+        data_num=context.glContext.config['data_num']
+        snap_num=context.glContext.config['snap_num_train']
+        self.__window_size_set = [int(0.1*snap_num),int(0.2*snap_num), int(0.3*snap_num)]
+        self.__vertex_size_set = [int(0.005*data_num),int(0.01*data_num), int(0.05*data_num), int(0.1*data_num)]
         # self.__vertex_size_set = [pow(2, i) for i in range(0, int(
         #     np.log2(context.glContext.config['data_num_local'])) + 1)]  # [1,2,4,8,16,32,64,128,256,512,1024,2048]
         # self.__vertex_size_set.append(int(context.glContext.config['data_num']/context.glContext.config['worker_num']))
@@ -426,6 +429,7 @@ class AdapRLTuner:
             acc_avrg = getAccAvrg([1, test_num], [1, cost_test])
             self.__loss_lst = acc_avrg['test']
             model.to(context.glContext.config['device'])
+
 
     # def trans_to_size(self, action_div):
     #     window_size = int(context.glContext.config['window_size'] * action_div[0])

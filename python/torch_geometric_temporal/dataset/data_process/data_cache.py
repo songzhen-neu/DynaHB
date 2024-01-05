@@ -122,9 +122,10 @@ def _encode(self):
     #     self.target_vertex[s] = np.vectorize(old2new_tmp.get)(self.target_vertex[s][0])
     #     dist.barrier()  # ensure all workers finished the i-th snapshot
 
-    for i in range(workloadAwarePartition.group_size):
-        workloadAwarePartition.div_target_vertex[i] = np.array(
-            [old2new_map[j] for j in workloadAwarePartition.div_target_vertex[i]])
+    if context.glContext.config['partitionMethod']=='load_aware':
+        for i in range(workloadAwarePartition.group_size):
+            workloadAwarePartition.div_target_vertex[i] = np.array(
+                [old2new_map[j] for j in workloadAwarePartition.div_target_vertex[i]])
     dist.barrier()
     # self.old2new_maps = old2new_maps
     self.old2new_maps = old2new_map

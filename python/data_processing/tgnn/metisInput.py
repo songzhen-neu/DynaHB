@@ -2,27 +2,62 @@
 # loader = ChickenpoxDatasetLoader()
 
 
-from torch_geometric_temporal.dataset import EnglandCovidDatasetLoader
-loader = EnglandCovidDatasetLoader()
 
-fileName='/mnt/data/englandcovid'      #chickenpox
+# from torch_geometric_temporal.dataset import IaSlashdotReplyDirDatasetLoader
+# loader = IaSlashdotReplyDirDatasetLoader()
+# fileName='/mnt/data/dataset/ia-slashdot-reply-dir'      #chickenpox
+# edgesMetisFileName=fileName+'/metis.txt'
+# index=97
+
+# from torch_geometric_temporal.dataset import SocBitcoinDatasetLoader
+# loader = SocBitcoinDatasetLoader()
+# fileName='/mnt/data/dataset/soc-bitcoin'      #chickenpox
+# edgesMetisFileName=fileName+'/metis.txt'
+# index=97
+
+# from torch_geometric_temporal.dataset import SocYoutubeGrowthDatasetLoader
+# loader = SocYoutubeGrowthDatasetLoader()
+# fileName='/mnt/data/dataset/soc-youtube-growth'      #chickenpox
+# edgesMetisFileName=fileName+'/metis.txt'
+# index=97
+
+# from torch_geometric_temporal.dataset import SocFlickrGrowthDatasetLoader
+# loader = SocFlickrGrowthDatasetLoader()
+# fileName='/mnt/data/dataset/soc-flickr-growth'      #chickenpox
+# edgesMetisFileName=fileName+'/metis.txt'
+# index=97
+
+# from torch_geometric_temporal.dataset import RecAmazonRatingsDatasetLoader
+# loader = RecAmazonRatingsDatasetLoader()
+# fileName='/mnt/data/dataset/rec-amazon-ratings'      #chickenpox
+# edgesMetisFileName=fileName+'/metis.txt'
+# index=97
+
+from torch_geometric_temporal.dataset import RecAmzBooksDatasetLoader
+loader = RecAmzBooksDatasetLoader()
+fileName='/mnt/data/dataset/rec-amz-Books'      #chickenpox
 edgesMetisFileName=fileName+'/metis.txt'
+index=97
+
+
+
+
 isDynamic=True
 
 
 
-dataset = loader.get_dataset()
+dataset = loader.get_global_dataset(0)
 
 
 if isDynamic:
-    nodeNum = dataset.features[0].shape[0]
-    featDim = dataset.features[0].shape[1]
-    edgesNum = dataset.edge_weights[0].shape[0]
-    edges = dataset.edge_indices[0]
-    edgesFeat = dataset.edge_weights[0]
+    nodeNum = dataset.features[index].shape[0]
+    featDim = dataset.features[index].shape[1]
+    edgesNum = dataset.edge_weights[index].shape[0]
+    edges = dataset.edges[index]
+    edgesFeat = dataset.edge_weights[index]
 else:
-    nodeNum = dataset.features[0].shape[0]
-    featDim = dataset.features[0].shape[1]
+    nodeNum = dataset.features[index].shape[0]
+    featDim = dataset.features[index].shape[1]
     edgesNum = dataset.edge_weight.shape[0]
     edges = dataset.edge_index
     edgesFeat = dataset.edge_weight

@@ -42,8 +42,19 @@ class WorkloadAwarePartition:
     def div_array_by_mod(self, sorted_indices):
         worker_num = context.glContext.config['worker_num']
         indices_mod = [None for i in range(worker_num)]
+        # for i in range(worker_num):
+        #     indices_mod[i] = sorted_indices[i::worker_num]
         for i in range(worker_num):
-            indices_mod[i] = sorted_indices[i::worker_num]
+            array_a=sorted_indices[i::worker_num*2]
+            array_b=sorted_indices[2*worker_num-i-1::worker_num*2]
+            min_length=min(len(array_a),len(array_b))
+            if len(array_a)>min_length:
+                last_elem_a=array_a[-1]
+                array_a=array_a[:min_length]
+                indices_mod[i]=np.column_stack((array_a,array_b)).reshape(-1)
+                indices_mod[i]=np.concatenate((indices_mod[i],last_elem_a))
+            else:
+                indices_mod[i] = np.column_stack((array_a, array_b)).reshape(-1)
         return indices_mod
 
 

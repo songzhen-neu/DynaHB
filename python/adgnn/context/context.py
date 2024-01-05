@@ -12,16 +12,17 @@ class Context(object):
         'worker_address': {},
         'id': -1,
         # 'ip':"127.0.0.1",
-        # 'ip': "202.199.6.224",
-        'ip':'192.168.1.1',
-        'worker_num': 3,
+        'ip': "202.199.6.224",
+        # 'ip':'192.168.1.1',
+        'worker_num': 5,
         'partitionMethod': 'load_aware',  # hash,metis,load_aware
         'layer_num': None,
         'emb_dims': [],
-        'iterNum': 2001,
+        'iterNum': 201,
         # 'lr': 0.01,
         # 'print_result_interval': 10,
-        'time_update':10,
+        'time_update':0.2,
+        # 'time_update': 1,
         'device': 'cuda', # cpu,cuda
 
         # optimization switch
@@ -31,19 +32,17 @@ class Context(object):
 
 
         # Dynamic Graphs
-        # 'data_path': "/mnt/data/dataset/ia_slashdot_reply_dir",  # 51k,140k
-        # 'feature_dim': 2,
-        # 'data_num': 51083,
-        # 'hidden': [16,16],
-        # 'class_num': 1,
-        # 'train_ratio': 0.4,
-        # # 'window_size': 24,  # 57,143
-        # # 'batch_size': 17027,  # 17027,51083
-        # 'window_size': 10,  # 57,143
-        # 'batch_size': 17027,  # 17027,51083
-        # 'lr': 0.001
+        'data_path': "/mnt/data/dataset/ia-slashdot-reply-dir",  # 51k,140k
+        'feature_dim': 2,
+        'data_num': 51083,
+        'hidden': [16],
+        'class_num': 1,
+        'train_ratio': 0.4,
+        'window_size': 6,  # 6,32,80, batch/train/total
+        'batch_size': 511,  # 511,10216,51083, batch/local/total
+        'lr': 0.001
 
-        # 'data_path': "/mnt/data/dataset/soc_bitcoin",  # edge 122948162, vertex_num 24575382
+        # 'data_path': "/mnt/data/dataset/soc-bitcoin",  # edge 122948162, vertex_num 24575382
         # 'feature_dim': 2,
         # 'data_num': 24575382,
         # 'hidden': [2],
@@ -53,7 +52,7 @@ class Context(object):
         # 'batch_size': 17027,  # 17027,51083
         # 'lr': 0.001
 
-        # 'data_path': "/mnt/data/dataset/soc_flickr_growth",  # england_covid
+        # 'data_path': "/mnt/data/dataset/soc-flickr-growth",  # england_covid
         # 'feature_dim': 2,
         # 'data_num': 2302925,
         # 'hidden': [8],
@@ -63,7 +62,7 @@ class Context(object):
         # 'batch_size': 17027,  # 2302925
         # 'lr': 0.001
 
-        # 'data_path': "/mnt/data/dataset/rec_amazon_ratings",  # snapshots:100, edge_num:5838038,vertex_num:2146057
+        # 'data_path': "/mnt/data/dataset/rec-amazon-ratings",  # snapshots:100, edge_num:5838038,vertex_num:2146057
         # 'feature_dim': 2,
         # 'data_num': 2146057,
         # 'hidden': [8],
@@ -73,15 +72,25 @@ class Context(object):
         # 'batch_size': 17027,  # 2302925
         # 'lr': 0.001
 
-        'data_path': "/mnt/data/dataset/soc_youtube_growth",  # snapshots:100, edge_num:5838038,vertex_num:2146057
-        'feature_dim': 2,
-        'data_num': 2146057,
-        'hidden': [8],
-        'class_num': 1,
-        'train_ratio': 0.4,
-        'window_size': 30,  # 132
-        'batch_size': 17027,  # 2302925
-        'lr': 0.001
+        # 'data_path': "/mnt/data/dataset/soc-youtube-growth",  # snapshots:100, edge_num:12223773,vertex_num:3223589
+        # 'feature_dim': 2,
+        # 'data_num': 3223589,
+        # 'hidden': [8],
+        # 'class_num': 1,
+        # 'train_ratio': 0.4,
+        # 'window_size': 30,  # 132
+        # 'batch_size': 17027,  # 2302925
+        # 'lr': 0.001
+
+        # 'data_path': "/mnt/data/dataset/rec-amz-Books",  # snapshots:100, edge_num:22507154,vertex_num:10356390
+        # 'feature_dim': 2,
+        # 'data_num': 10356390,
+        # 'hidden': [8],
+        # 'class_num': 1,
+        # 'train_ratio': 0.4,
+        # 'window_size': 30,  # 132
+        # 'batch_size': 17027,  # 2302925
+        # 'lr': 0.001
 
 
         # 'data_path':"/mnt/data/dataset/twitter_tennis", #england_covid

@@ -9,6 +9,7 @@ from torch_geometric.nn.inits import glorot
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric_temporal.nn.conv.gcn_conv import gcn_norm
 # from torch_geometric.nn.conv.gcn_conv import gcn_norm
+import adgnn.context.context as context
 
 class GCNConv_Fixed_W(MessagePassing):
     r"""The graph convolutional operator adapted from the `"Semi-supervised
@@ -157,6 +158,8 @@ class EvolveGCNO(torch.nn.Module):
         self.recurrent_layer = GRU(
             input_size=self.in_channels, hidden_size=self.in_channels, num_layers=1
         )
+        self.add_module('recurrent_layer',self.recurrent_layer)
+
         for param in self.recurrent_layer.parameters():
             param.requires_grad = True
             param.retain_grad()
@@ -169,6 +172,7 @@ class EvolveGCNO(torch.nn.Module):
             normalize=self.normalize,
             add_self_loops=self.add_self_loops
         )
+        self.add_module('conv_layer',self.conv_layer)
 
     def forward(
             self,
@@ -187,10 +191,10 @@ class EvolveGCNO(torch.nn.Module):
         Return types:
             * **X** *(PyTorch Float Tensor)* - Output matrix for all nodes.
         """
-
         if self.weight is None:
             _, self.weight = self.recurrent_layer(self.initial_weight, self.initial_weight)
         else:
+            self.weight=self.weight.detach().to(X.device)
             _, self.weight = self.recurrent_layer(self.weight, self.weight)
         self.weight = self.weight.detach()
         X = self.conv_layer(self.weight.squeeze(dim=0), X, edge_index, edge_weight, deg)[:target_num]

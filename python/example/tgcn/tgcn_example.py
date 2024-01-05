@@ -11,7 +11,7 @@ sys.path.insert(0, BASE_PATH)
 sys.path.insert(1, BASE_PATH + '/../')
 sys.path.insert(2, BASE_PATH + '/../../')
 sys.path.insert(3, BASE_PATH + '/../../../')
-os.environ['GLOO_SOCKET_IFNAME'] = 'eno1'
+
 
 import torch
 import numpy as np
@@ -25,15 +25,16 @@ from adgnn.distributed.engine import Engine
 import adgnn.util_python.adap_batch_size as adap
 
 from torch.nn.parallel import DistributedDataParallel
-
+from torch_geometric_temporal.signal import temporal_signal_split
 
 from torch_geometric_temporal.dataset import TwitterTennisDatasetLoader
 from torch_geometric_temporal.dataset import IaSlashdotReplyDirDatasetLoader
 from torch_geometric_temporal.dataset import SocFlickrGrowthDatasetLoader
 from torch_geometric_temporal.dataset import SocBitcoinDatasetLoader
-from torch_geometric_temporal.signal import temporal_signal_split
 from torch_geometric_temporal.dataset import TestDatasetLoader
 from torch_geometric_temporal.dataset import RecAmazonRatingsDatasetLoader
+from torch_geometric_temporal.dataset import SocYoutubeGrowthDatasetLoader
+from torch_geometric_temporal.dataset import RecAmzBooksDatasetLoader
 
 from adgnn.util_python.timecounter import time_counter
 from adgnn.system_optimization.batch_generate import batchGenerator
@@ -43,6 +44,8 @@ import random
 from adgnn.util_python.get_distributed_acc import getAccAvrg
 import time as tm
 from adgnn.system_optimization.synchronization.distributed_synchronization import SynchronousModel, AsynchronousModel
+
+from adgnn.util_python.test_model import test_model
 
 torch.set_printoptions(4)
 torch.manual_seed(42)
@@ -70,15 +73,20 @@ def buildInitGraph():
         loader = TestDatasetLoader()
     elif context.glContext.config['data_path'].__contains__('twitter_tennis'):
         loader = TwitterTennisDatasetLoader()
-    elif context.glContext.config['data_path'].__contains__('ia_slashdot_reply_dir'):
+    elif context.glContext.config['data_path'].__contains__('ia-slashdot-reply-dir'):
         loader = IaSlashdotReplyDirDatasetLoader()
-    elif context.glContext.config['data_path'].__contains__('soc_flickr_growth'):
+    elif context.glContext.config['data_path'].__contains__('soc-flickr-growth'):
         loader = SocFlickrGrowthDatasetLoader()
-    elif context.glContext.config['data_path'].__contains__('soc_bitcoin'):
+    elif context.glContext.config['data_path'].__contains__('soc-bitcoin'):
         loader = SocBitcoinDatasetLoader()
-    elif context.glContext.config['data_path'].__contains__('rec_amazon_ratings'):
+    elif context.glContext.config['data_path'].__contains__('rec-amazon-ratings'):
         loader = RecAmazonRatingsDatasetLoader()
-    dataset = loader.get_dataset(lags=context.glContext.config['feature_dim'])
+    elif context.glContext.config['data_path'].__contains__('soc-youtube-growth'):
+        loader = SocYoutubeGrowthDatasetLoader()
+    elif context.glContext.config['data_path'].__contains__('rec-amz-Books'):
+        loader = RecAmzBooksDatasetLoader()
+
+    dataset = loader.get_dataset()
     train_dataset, test_dataset = temporal_signal_split(dataset, train_ratio=context.glContext.config['train_ratio'])
     context.glContext.config['snap_num_train'] = train_dataset.snapshot_count
     context.glContext.config['data_num_local'] = len(train_dataset.target_vertex)
@@ -123,19 +131,7 @@ class RecurrentGCN(torch.nn.Module):
 #                 'worker_num']
 
 
-def test_model(model, test_dataset):
-    cost_test = 0
-    model.eval()
-    model.to('cpu')
-    hidden_state = [None for i in range(len(context.glContext.config['hidden']))]
-    for time, snapshot in enumerate(test_dataset):
-        y_hat, hidden_state = model(snapshot.x, snapshot.edge, snapshot.edge_weight, hidden_state,
-                                    snapshot.deg)
-        cost_test = cost_test + torch.mean((y_hat.view(-1) - snapshot.y) ** 2)
-    cost_test = cost_test / (time + 1)
-    model.to(context.glContext.config['device'])
-    test_num = test_dataset.target_vertex[0][0].shape[0]
-    return test_num, cost_test
+
 
 
 def avrg_model(model):
@@ -220,9 +216,9 @@ class TGCN_Engine(Engine):
             if epoch_count == 0:
                 AsynchronousModel.start_time = tm.time()
 
-            if context.glContext.config['dist_mode'] == 'sync':
-                dist.barrier()
-            if (tm.time() - AsynchronousModel.start_time) / AsynchronousModel.time_update >= 1 or epoch_count==0:
+            # if context.glContext.config['dist_mode'] == 'sync':
+            #     dist.barrier()
+            if (tm.time() - AsynchronousModel.start_time) / AsynchronousModel.time_update >= 1 or epoch_count==0 or context.glContext.config['dist_mode'] == 'sync':
 
                 if context.glContext.config['dist_mode'] == 'asyn':
                     avrg_model(model)
@@ -241,24 +237,29 @@ class TGCN_Engine(Engine):
                 print('Epoch: {:04d}'.format(epoch + 1),
                       'cost_train: {:.8f}'.format(acc_avrg['train']),
                       'cost_test: {:.8f}'.format(acc_avrg['test']),
-                      'memory_used:{}'.format(time_counter.getMemory()),
-                      'time:{:.4f}'.format(time_counter.time_list['batch_time'][-1]))
+                      'memory_used: {}'.format(time_counter.getMemory()),
+                      'epoch_time: {:.4f}'.format(time_counter.time_list['batch_time'][-1]),
+                      'total_time: {:.4f}'.format(time_counter.get_total_time('batch_time')))
                 if acc_avrg['test'] < min_cost[0] and acc_avrg['test'] != 0:
                     min_cost[0] = acc_avrg['test']
                     min_cost[1] = epoch
                     min_cost[2]=epoch_count
-                if epoch_count - min_cost[2] >= 20:
+                if epoch_count - min_cost[2] >= 10:
                     break
+                if context.glContext.config['dist_mode'] == 'sync':
+                    dist.barrier()
                 AsynchronousModel.start_time=tm.time()
                 epoch_count+=1
 
 
-
+        # dist.barrier()
         print(min_cost)
         print('from pool:{0}, new generate:{1}'.format(batchGenerator.batch_choose_ratio[0],
                                                        batchGenerator.batch_choose_ratio[1]))
         print("Training End")
         time_counter.printAvrgTime(min_cost[1])
+        time_counter.printTotalTime(min_cost[1])
+        # dist.barrier()
 
 
 if __name__ == "__main__":

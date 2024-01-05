@@ -7,12 +7,16 @@ from adgnn.context import context
 import torch.distributed as dist
 import socket, torch
 import netifaces as ni
+import os
 
 
 def is_local_ip(ip_address):
     # 判断是否为局域网IP
     return ip_address.startswith(("192.168.", "10.", "172."))
 
+def is_global_ip(ip_address):
+    # 判断是否为局域网IP
+    return ip_address.startswith(("202.", "219."))
 
 def get_local_ip():
     try:
@@ -23,10 +27,14 @@ def get_local_ip():
             addresses = ni.ifaddresses(interface).get(ni.AF_INET, [])
             for address_info in addresses:
                 ip_address = address_info.get('addr')
-                if ip_address and not ip_address.startswith("127."):
-                    # 如果是局域网IP，返回
-                    if is_local_ip(ip_address):
+                if context.glContext.config['ip'].startswith(('202.','219.')):
+                    if is_global_ip(ip_address):
                         return ip_address
+                else:
+                    if ip_address and not ip_address.startswith("127."):
+                        # 如果是局域网IP，返回
+                        if is_local_ip(ip_address):
+                            return ip_address
 
         # 如果没有找到局域网IP，则获取第一个非回环的IPv4地址
         for interface in interfaces:
@@ -97,6 +105,10 @@ class Engine:
         print("get ip end!!")
 
     def run(self):
+        if context.glContext.config['id']==3 or context.glContext.config['id']==4:
+            os.environ['GLOO_SOCKET_IFNAME'] = 'eno1'
+        else:
+            os.environ['GLOO_SOCKET_IFNAME'] = 'eno2'
         init_method = "tcp://" + context.glContext.config['ip'] + ":7889"
         # init_method = "file:///mnt/data/nfs/sharedfile"
         print(init_method,context.glContext.config['id'],context.glContext.config['worker_num'])

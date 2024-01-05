@@ -31,9 +31,9 @@ class TimeCounter():
         for id in self.time_list.keys():
             print('average ' + str(id) + ' time: {:.4f}s'.format(np.array(self.time_list[id][:end_epoch]).mean()))
 
-    def printTotalTime(self):
+    def printTotalTime(self,end_epoch):
         for id in self.time_list.keys():
-            print('total ' + str(id) + ' time: {:.4f}s'.format(np.array(self.time_list[id]).sum()))
+            print('total ' + str(id) + ' time: {:.4f}s'.format(np.array(self.time_list[id][:end_epoch]).sum()))
 
     def getMemory(self):
         process = psutil.Process(os.getpid())
@@ -46,5 +46,9 @@ class TimeCounter():
 
     def end_single(self,key):
         print(key + ' end:{0}, {1:.4f}s'.format(self.getMemory(),time.time()-self.single_time[key]))
+
+    def get_total_time(self,key):
+        time_array=np.array(self.time_list[key])
+        return time_array.sum()
 
 time_counter = TimeCounter()

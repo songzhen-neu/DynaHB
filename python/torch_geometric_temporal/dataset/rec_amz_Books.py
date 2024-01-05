@@ -8,29 +8,24 @@ from torch_geometric.utils import add_remaining_self_loops
 from python.torch_geometric_temporal.dataset.data_process.data_cache import start_cache
 import pandas
 
-# path='/mnt/data/dataset/SFHH-conf-sensor/SFHH-conf-sensor.edges'
-# window=20
-# is_weighted=False
-# delimiter=','
-# skip_header=0
 
 
-# path = '/mnt/data/dataset/ia-slashdot-reply-dir/ia-slashdot-reply-dir.edges'
-# window = 1000
-# is_weighted = True
-# delimiter = ' '
-# skip_header = 2
+path = '/mnt/data/dataset/rec-amz-Books/rec-amz-Books.edges'
+window = 100
+is_weighted = True
+delimiter = ','
+skip_header = 0
 
 
-path='/mnt/data/dataset/soc-flickr-growth/soc-flickr-growth.edges'
-window=100
-is_weighted=True
-delimiter='\s+'
-skip_header=1
+# path='/mnt/data/dataset/soc-flickr-growth/soc-flickr-growth.edges'
+# window=300
+# is_weighted=True
+# delimiter=' '
+# skip_header=1
 
 def get_src_tgt_wei_time(data):
-    source_vertices = data[:, 0].astype(int)
-    target_vertices = data[:, 1].astype(int)
+    source_vertices = data[:, 0].astype(str)
+    target_vertices = data[:, 1].astype(str)
     if data.shape[1] == 3:
         edge_weights = np.ones_like(source_vertices)
         timestamps = data[:, 2].astype(int)
@@ -54,7 +49,7 @@ def get_encoded_src_tgt(source_vertices, target_vertices):
     return source_vertices_mapped, target_vertices_mapped, vertex_num
 
 
-class SocFlickrGrowthDatasetLoader(object):
+class RecAmzBooksDatasetLoader(object):
     def __init__(self):
         # self.N = N
         self.target_vertex = None
@@ -86,6 +81,7 @@ class SocFlickrGrowthDatasetLoader(object):
             edge_weight_snapshots[i] = np.array(edge_weights[mask])
             # edge_snapshots[i], edge_weight_snapshots[i] = add_remaining_self_loops(
             #     torch.tensor(edge_snapshots[i]), torch.tensor(edge_weight_snapshots[i]), 1., self.N)
+
 
             # edge_snapshots[i] = edge_snapshots[i].detach().numpy()
             # edge_weight_snapshots[i] = edge_weight_snapshots[i].detach().numpy()
@@ -133,7 +129,7 @@ class SocFlickrGrowthDatasetLoader(object):
             snapshot_id = min(time + 1, self.snapshot_count - 1)
             y = np.array(self.features[snapshot_id][:, 0])
             # logarithmic transformation for node degrees
-            y = np.log(y + 1)
+            y = np.log(y+1)
             self.targets.append(y)
 
     def get_dataset(self, lags=0) -> DynamicGraphTemporalSignal:

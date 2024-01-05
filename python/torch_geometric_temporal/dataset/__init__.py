@@ -1,7 +1,8 @@
-
 from .test import TestDatasetLoader
 from .twitter_tennis import TwitterTennisDatasetLoader
 from .ia_slashdot_reply_dir import IaSlashdotReplyDirDatasetLoader
 from .soc_flickr_growth import SocFlickrGrowthDatasetLoader
 from .soc_bitcoin import SocBitcoinDatasetLoader
 from .rec_amazon_ratings import RecAmazonRatingsDatasetLoader
+from .soc_youtube_growth import SocYoutubeGrowthDatasetLoader
+from .rec_amz_Books import RecAmzBooksDatasetLoader
