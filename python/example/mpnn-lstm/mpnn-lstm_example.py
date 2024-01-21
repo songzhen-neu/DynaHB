@@ -21,7 +21,7 @@ import torch
 import numpy as np
 import torch.nn.functional as F
 from adgnn.context import context
-from torch_geometric_temporal.nn import DCRNN
+from torch_geometric_temporal.nn import MPNNLSTM
 import adgnn.util_python.param_parser as pp
 import psutil
 
@@ -98,10 +98,15 @@ def buildInitGraph():
 class RecurrentGCN(torch.nn.Module):
     def __init__(self, node_features):
         super(RecurrentGCN, self).__init__()
-        self.recurrent = DCRNN(node_features, context.glContext.config['hidden'][0], 1)
-        self.linear = torch.nn.Linear(context.glContext.config['hidden'][0], 1)
+        # self.recurrent = DCRNN(node_features, context.glContext.config['hidden'][0], 1)
+        # self.linear = torch.nn.Linear(context.glContext.config['hidden'][0], 1)
+        hidden_size=context.glContext.config['hidden'][0]
+        self.recurrent = MPNNLSTM(node_features, hidden_size, 1, 0.5)
+        self.linear = torch.nn.Linear(2 * hidden_size + node_features, 1)
 
     def forward(self, x, edge, edge_weight, prev_hidden_state, deg):
+        # if int(self)==0:
+        #     pass
         target_num = len(deg[0][0])
         h = self.recurrent(x, target_num, deg[1], edge[0], edge_weight[0])
         h = F.relu(h)
@@ -147,6 +152,7 @@ class TGCN_Engine(Engine):
 
         # buildInitGraph does some initial work, ensure this has been executed before using variables of context
         train_dataset, test_dataset = buildInitGraph()
+
         min_cost = [100000, 0, 0]
 
         adap_rl = adap.AdapRLTuner()
@@ -181,13 +187,6 @@ class TGCN_Engine(Engine):
         # if context.glContext.config['window_size'] == -1 or context.glContext.config['batch_size'] == -1:
         #     train_dataset_full.to_device(context.glContext.config['device'])
 
-        epoch_count = 0
-
-        # test_dataset.to_device(context.glContext.config['device'])
-        # initial test loss
-        if context.glContext.config['is_adap_batch']:
-            adap_rl.init_adap(test_dataset, model)
-
         for i in range(adap_rl.get_action_size()):
             adap_rl.batch_pool[i] = []
 
@@ -200,18 +199,24 @@ class TGCN_Engine(Engine):
 
             print([len(adap_rl.batch_pool[i]) for i in range(len(adap_rl.batch_pool))])
 
+        epoch_count = 0
+
+        # test_dataset.to_device(context.glContext.config['device'])
+        # initial test loss
+        if context.glContext.config['is_adap_batch']:
+            adap_rl.init_adap(test_dataset, model)
 
         for epoch in range(context.glContext.config['iterNum']):
             if context.glContext.config['dist_mode']=='sync':
                 dist.barrier()
             model.train()
-            context.glContext.lock.acquire()
             time_counter.start('batch_time')
-            # data_batch = batchGenerator.generate_batch(adap_rl, train_dataset)
+            context.glContext.lock.acquire()
             if context.glContext.config['window_size'] == -1 or context.glContext.config['batch_size'] == -1:
                 data_batch = batchGenerator.generate_batch(adap_rl, train_dataset_full)
             else:
                 data_batch = batchGenerator.generate_batch(adap_rl, train_dataset)
+
             cost_train = 0
             hidden_state = [None for i in range(len(context.glContext.config['hidden']))]
             time_counter.start('forward')
@@ -288,7 +293,7 @@ class TGCN_Engine(Engine):
 
 if __name__ == "__main__":
     pp.parserInit()
-    model = RecurrentGCN(node_features=context.glContext.config['feature_dim'])
+    model=RecurrentGCN(node_features=context.glContext.config['feature_dim'])
     gcn_engine = TGCN_Engine(model)
     gcn_engine()
     print("program end")

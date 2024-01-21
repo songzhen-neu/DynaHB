@@ -143,9 +143,9 @@ class TGCN(torch.nn.Module):
         # row=np.array(edge_index[0])
         # print(row.max(),len(X))
         H = self._set_hidden_state(X, H,target_num)
-        Z = self._calculate_update_gate(X, edge_index, edge_weight, H, deg)
-        R = self._calculate_reset_gate(X, edge_index, edge_weight, H, deg)
-        H_tilde = self._calculate_candidate_state(X, edge_index, edge_weight, H, R, deg)
+        Z = self._calculate_update_gate(X, edge_index, edge_weight, H, deg[0])
+        R = self._calculate_reset_gate(X, edge_index, edge_weight, H, deg[0])
+        H_tilde = self._calculate_candidate_state(X, edge_index, edge_weight, H, R, deg[0])
         H = self._calculate_hidden_state(Z, H, H_tilde)
         return H
 

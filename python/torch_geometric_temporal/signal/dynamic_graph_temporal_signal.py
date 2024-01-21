@@ -6,14 +6,17 @@ from torch_geometric.data import Data
 import torch.distributed as dist
 import adgnn.context.context as context
 from adgnn.system_optimization.partition import workloadAwarePartition
+from adgnn.util_python.timecounter import time_counter
 
-Edges = Sequence[Union[np.ndarray, list, None]]
-Edge_Weights = Sequence[Union[np.ndarray, list, None]]
-Node_Features = Sequence[Union[np.ndarray, None]]
+Edges = Sequence[Union[np.ndarray, list, torch.tensor, None]]
+Edge_Weights = Sequence[Union[np.ndarray, list, torch.tensor, None]]
+Node_Features = Sequence[Union[np.ndarray, torch.tensor, None]]
 Targets = Sequence[Union[np.ndarray, None]]
 Additional_Features = Sequence[np.ndarray]
 # Old2New_Maps = Sequence[Union[dict, None]]
 Degs = Sequence[Union[np.ndarray, list, None]]
+
+
 # Target_Vertex = Sequence[Union[dict, list, None]]
 
 
@@ -125,72 +128,87 @@ class DynamicGraphTemporalSignal(object):
         return self.target_vertex
 
     def _get_nei_unique(self, edges, target_vertex, target_vertex_next_hop):
+        # dst_nodes_tensor = torch.LongTensor(edges[1]).to(context.glContext.config['device'])
+        # target_vertex_tensor = torch.LongTensor(target_vertex).to(context.glContext.config['device'])
+        # mask_nei = torch.isin(dst_nodes_tensor, target_vertex_tensor).to('cpu')
+
+
         mask_nei = np.isin(edges[1], target_vertex)
         neis = np.unique(edges[0][mask_nei])
         mask_nei_not_in_target = ~np.isin(neis, target_vertex)
         neis = neis[mask_nei_not_in_target]
-        mask_nei_not_in_next= ~np.isin(neis, target_vertex_next_hop)
+        mask_nei_not_in_next = ~np.isin(neis, target_vertex_next_hop)
         nei_unique = neis[mask_nei_not_in_next]
-        return nei_unique
+        return nei_unique, mask_nei
 
-    def _get_edge_and_edgeweight_by_target(self, target_vertex, edge, edge_weight):
-        mask_agg = np.isin(edge[1], target_vertex)
-        return edge[:, mask_agg], edge_weight[mask_agg]
+    # def _get_edge_and_edgeweight_by_target(self, target_vertex, edge, edge_weight,mask_agg):
+    #     # mask_agg = np.isin(edge[1], target_vertex)
+    #     # dst_nodes_tensor=torch.LongTensor(edge[1]).to(context.glContext.config['device'])
+    #     # target_vertex_tensor=torch.LongTensor(target_vertex).to(context.glContext.config['device'])
+    #     # mask_agg=torch.isin(dst_nodes_tensor,target_vertex_tensor).to('cpu')
+    #
+    #     return edge[:, mask_agg], edge_weight[mask_agg]
 
     def _get_encode_edge(self, encode_vertex, edge):
         o2n_map = {j: i for i, j in enumerate(encode_vertex)}
-        encode_edge = np.array(
-            [[o2n_map.get(value, value) for value in row] for row in edge])
+        # encode_edge = np.array(
+        #     [[o2n_map.get(value, value) for value in row] for row in edge])
+        if edge.size == 0:
+            encode_edge = edge
+        else:
+            encode_edge = np.array([np.vectorize(o2n_map.get)(arr) for arr in edge])
         return torch.LongTensor(encode_edge)
 
     def _get_random_batch(self, batch_size, window_id, window_size):
         layer_num = context.glContext.config['layer_num']
         target_vertex_batch = []
         target_vertex = [np.array([]) for i in range(layer_num + 1)]
+        mask_neis = {i: [None for _ in range(layer_num)] for i in range(window_id, window_id + window_size)}
 
         if context.glContext.config['partitionMethod'] == 'load_aware':
             group_size = workloadAwarePartition.group_size
             group_batch_size = int(batch_size / group_size)
-
             if group_batch_size == 0:
                 exit('batch_size should be more than group_size')
             for i in range(group_size):
+
                 random_target_tmp = np.random.choice(workloadAwarePartition.div_target_vertex[i], size=group_batch_size,
                                                      replace=False)
                 target_vertex[0] = np.concatenate((target_vertex[0], random_target_tmp))
         else:
             target_vertex[0] = np.random.choice(self.target_vertex, size=batch_size, replace=False)
         # target_vertex[0]=self.target_vertex[0]
+
         for j in range(layer_num):
             target_vertex[j + 1] = target_vertex[j]
             for i in range(window_id, window_id + window_size, 1):
                 snapshot = self[i]
-                nei_unique = self._get_nei_unique(snapshot.edge, target_vertex[j], target_vertex[j+1])
+                nei_unique, mask_nei = self._get_nei_unique(snapshot.edge, target_vertex[j], target_vertex[j + 1])
                 target_vertex[j + 1] = np.concatenate((target_vertex[j + 1], nei_unique), axis=0)
-
+                mask_neis[i][j] = mask_nei
         for i in range(window_id, window_id + window_size, 1):
             target_vertex_batch.append(target_vertex)
 
-        return target_vertex_batch
+        return target_vertex_batch, mask_neis
 
     def _get_test_full(self, window_id, window_size):
         layer_num = context.glContext.config['layer_num']
         target_vertex_batch = []
         target_vertex = [np.array([]) for i in range(layer_num + 1)]
-
+        mask_neis = {i: [None for _ in range(layer_num)] for i in range(window_id, window_id + window_size)}
         # target_vertex[0] = np.random.choice(self.target_vertex[0], size=batch_size, replace=False)
         target_vertex[0] = self.target_vertex
         for j in range(layer_num):
             target_vertex[j + 1] = target_vertex[j]
             for i in range(window_id, window_id + window_size, 1):
                 snapshot = self[i]
-                nei_unique = self._get_nei_unique(snapshot.edge, target_vertex[j],target_vertex[j+1])
+                nei_unique, mask_nei = self._get_nei_unique(snapshot.edge, target_vertex[j], target_vertex[j + 1])
                 target_vertex[j + 1] = np.concatenate((target_vertex[j + 1], nei_unique), axis=0)
-
+                mask_neis[i][j] = mask_nei
         for i in range(window_id, window_id + window_size, 1):
             target_vertex_batch.append(target_vertex)
 
-        return target_vertex_batch
+        return target_vertex_batch, mask_neis
 
     def construct_testable_data(self):
         layer_num = context.glContext.config['layer_num']
@@ -198,24 +216,39 @@ class DynamicGraphTemporalSignal(object):
         edge_weight_batch = []
         feature_batch = []
         target_batch = []
-        target_vertex_batch = self._get_test_full(0, self.snapshot_count)
+        target_vertex_batch, mask_neis = self._get_test_full(0, self.snapshot_count)
         deg_batch = []
 
         for i in range(self.snapshot_count):
             snapshot = self[i]
 
             target_vertex_snap = target_vertex_batch[i]
+            # deg_layer_in = [None for i in range(layer_num + 1)]
+            # deg_layer_in[0] = snapshot.deg[0][target_vertex_snap[0]]
+            # deg_layer_out = [None for i in range(layer_num + 1)]
+            # deg_layer_out[0] = snapshot.deg[1][target_vertex_snap[0]]
             deg_layer = [None for i in range(layer_num + 1)]
-            deg_layer[0] = snapshot.deg[target_vertex_snap[0]]
+            deg_layer[0] = [snapshot.deg[0][target_vertex_snap[0]], snapshot.deg[1][target_vertex_snap[0]]]
+
             edge_layer = [None for i in range(layer_num)]
             edge_weight_layer = [None for i in range(layer_num)]
             for j in range(layer_num):
-                edge, edge_weight = self._get_edge_and_edgeweight_by_target(target_vertex_snap[j], snapshot.edge,
-                                                                            snapshot.edge_weight)
+                # edge, edge_weight = self._get_edge_and_edgeweight_by_target(target_vertex_snap[j], snapshot.edge,
+                #                                                             snapshot.edge_weight,mask_neis[i][j])
+                # if snapshot.edge_weight[mask_neis[i][j]].shape[0]!=0:
+                #     edge,edge_weight=snapshot.edge[:, mask_neis[i][j]], snapshot.edge_weight[mask_neis[i][j]]
+                # else:
+                #     edge,edge_weight=np.empty((2,0),dtype=np.int64),torch.empty((1,0),dtype=torch.float32)
+                edge, edge_weight = snapshot.edge[:, mask_neis[i][j]], snapshot.edge_weight[mask_neis[i][j]]
+
                 edge_encode = self._get_encode_edge(target_vertex_snap[j + 1], edge)
                 edge_layer[j] = edge_encode
                 edge_weight_layer[j] = edge_weight
-                deg_layer[j + 1] = snapshot.deg[target_vertex_snap[j + 1]]
+                # deg_layer_in[j + 1] = snapshot.deg[0][target_vertex_snap[j + 1]]
+                # deg_layer_out[j + 1] = snapshot.deg[1][target_vertex_snap[j + 1]]
+                deg_layer_in = snapshot.deg[0][target_vertex_snap[j + 1]]
+                deg_layer_out = snapshot.deg[1][target_vertex_snap[j + 1]]
+                deg_layer[j + 1] = [deg_layer_in, deg_layer_out]
 
             edge_batch.append(edge_layer)
             edge_weight_batch.append(edge_weight_layer)
@@ -236,39 +269,65 @@ class DynamicGraphTemporalSignal(object):
                 self.features[i] = self.features[i].to(device)
                 self.targets[i] = self.targets[i].to(device)
                 for j in range(len(self.degs[i])):
-                    self.degs[i][j] = self.degs[i][j].to(device)
+                    self.degs[i][j][0] = self.degs[i][j][0].to(device)
+                    self.degs[i][j][1] = self.degs[i][j][1].to(device)
                 for j in range(len(self.edge_weights[i])):
                     self.edge_weights[i][j] = self.edge_weights[i][j].to(device)
                 for j in range(len(self.edges[i])):
                     self.edges[i][j] = self.edges[i][j].to(device)
 
-    def get_batch(self, window_id):
-        batch_size = context.glContext.config['batch_size']
-        window_size = context.glContext.config['window_size']
+    def get_batch(self, window_id, window_size=None,
+                  batch_size=None):
+        # time_counter.start('get_batch_inner')
+        if window_size==None:
+            batch_size = context.glContext.config['batch_size']
+            window_size = context.glContext.config['window_size']
+
         layer_num = context.glContext.config['layer_num']
+        # print('layer_num:{0},window:{1},batch:{2}'.format(layer_num,window_size,batch_size))
+        # slide-window mode
+        if batch_size == -1:
+            return DynamicGraphTemporalSignal(self.edges[window_id:window_id + window_size],
+                                              self.edge_weights[window_id:window_id + window_size],
+                                              self.features[window_id:window_id + window_size],
+                                              self.targets[window_id:window_id + window_size],
+                                              self.target_vertex[window_id:window_id + window_size],
+                                              self.degs[window_id:window_id + window_size], None)
+
+
         edge_batch = []
         edge_weight_batch = []
         feature_batch = []
         target_batch = []
-        target_vertex_batch = self._get_random_batch(batch_size, window_id, window_size)
+        # time_counter.start('_get_random_batch')
+        target_vertex_batch, mask_neis = self._get_random_batch(batch_size, window_id, window_size)
+        # time_counter.end('_get_random_batch')
         deg_batch = []
-
         for i in range(window_id, window_id + window_size, 1):
             snapshot = self[i]
-
             target_vertex_snap = target_vertex_batch[i - window_id]
+            # deg_layer_in = [None for i in range(layer_num + 1)]
+            # deg_layer_in[0] = snapshot.deg[0][target_vertex_snap[0]]
+            # deg_layer_out = [None for i in range(layer_num + 1)]
+            # deg_layer_out[0] = snapshot.deg[1][target_vertex_snap[0]]
             deg_layer = [None for i in range(layer_num + 1)]
-            deg_layer[0] = snapshot.deg[target_vertex_snap[0]]
+            deg_layer[0] = [snapshot.deg[0][target_vertex_snap[0]], snapshot.deg[1][target_vertex_snap[0]]]
             edge_layer = [None for i in range(layer_num)]
             edge_weight_layer = [None for i in range(layer_num)]
             for j in range(layer_num):
-                edge, edge_weight = self._get_edge_and_edgeweight_by_target(target_vertex_snap[j], snapshot.edge,
-                                                                            snapshot.edge_weight)
+                # time_counter.start('_get_edge_and_edgeweight_by_target')
+                # edge, edge_weight = self._get_edge_and_edgeweight_by_target(target_vertex_snap[j], snapshot.edge,
+                #                                                             snapshot.edge_weight,mask_neis[i][j])
+                edge, edge_weight = snapshot.edge[:, mask_neis[i][j]], snapshot.edge_weight[mask_neis[i][j]]
+                # time_counter.end('_get_edge_and_edgeweight_by_target')
+                # time_counter.start('_get_encode_edge')
                 edge_encode = self._get_encode_edge(target_vertex_snap[j + 1], edge)
+                # time_counter.end('_get_encode_edge')
                 edge_layer[j] = edge_encode
                 edge_weight_layer[j] = edge_weight
-                deg_layer[j + 1] = snapshot.deg[target_vertex_snap[j + 1]]
-
+                deg_layer_in = snapshot.deg[0][target_vertex_snap[j + 1]]
+                deg_layer_out = snapshot.deg[1][target_vertex_snap[j + 1]]
+                deg_layer[j + 1] = [deg_layer_in, deg_layer_out]
             edge_batch.append(edge_layer)
             edge_weight_batch.append(edge_weight_layer)
             feature_batch.append(snapshot.x[target_vertex_snap[layer_num]])
@@ -293,7 +352,8 @@ class DynamicGraphTemporalSignal(object):
                 **{key: getattr(self, key)[time_index] for key in self.additional_feature_keys}
             )
         else:
-
+            # if time_index==31:
+            #     print('a')
             edge = self._get_edges(time_index)
             edge_weight = self._get_edge_weights(time_index)
             x = self._get_features(time_index)

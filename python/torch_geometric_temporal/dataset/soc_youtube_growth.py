@@ -15,6 +15,7 @@ window = 100
 is_weighted = True
 delimiter = '\s+'
 skip_header = 2
+lags=20
 
 
 # path='/mnt/data/dataset/soc-flickr-growth/soc-flickr-growth.edges'
@@ -64,18 +65,19 @@ class SocYoutubeGrowthDatasetLoader(object):
                                                                                          target_vertices)
         # encode time
         unique_timestamps = np.unique(timestamps)
-        unique_timestamps = np.sort(unique_timestamps)
+        unique_timestamps = np.sort(unique_timestamps)[1:]
         start_id = unique_timestamps[0]
         time_itv = (unique_timestamps[-1] - unique_timestamps[0]) / window
 
         # snap_mask = [None for i in range(window)]
-        edge_snapshots = [None for i in range(window)]
-        edge_weight_snapshots = [None for i in range(window)]
+        edge_snapshots = [None for i in range(window-lags)]
+        edge_weight_snapshots = [None for i in range(window-lags)]
         self.N = vertex_num
 
-        for i in range(window):
+        for i in range(0,window-lags,1):
             # time_counter.start_single('processed_window_' + str(i))
-            mask = (start_id + i * time_itv <= timestamps) & (timestamps < start_id + (i + 1) * time_itv)
+            # mask = (start_id + i * time_itv <= timestamps) & (timestamps < start_id + (i + 1) * time_itv)
+            mask = (start_id + i * time_itv <= timestamps) & (timestamps < start_id + (i + 1+lags) *time_itv)
             edge_snapshots[i] = np.array([source_vertices_mapped[mask], target_vertices_mapped[mask]])
 
             edge_weight_snapshots[i] = np.array(edge_weights[mask])
@@ -88,17 +90,17 @@ class SocYoutubeGrowthDatasetLoader(object):
 
             # time_counter.end_single('processed_window_' + str(i))
 
-        # edge_snapshots = [arr for arr in edge_snapshots if arr.size > 0]
+        edge_snapshots = [arr for arr in edge_snapshots if arr.size > 0]
 
-        # edge_weight_snapshots = [arr for arr in edge_weight_snapshots if arr.size > 0]
+        edge_weight_snapshots = [arr for arr in edge_weight_snapshots if arr.size > 0]
 
         self.snapshot_count = len(edge_snapshots)
         self.edge_num = len(source_vertices)
+        self.edge_life_num= np.array([len(arr) for arr in edge_weight_snapshots]).sum()
         self.edge_weights = edge_weight_snapshots
         self.edges = edge_snapshots
 
     def _read_web_data(self):
-        # self._dataset = np.loadtxt(path, skiprows=skip_header,dtype=int)
         time_counter.start_single('read_from_disk')
         self._dataset = pandas.read_csv(path, skiprows=skip_header, sep=delimiter).to_numpy()
         time_counter.end_single('read_from_disk')
@@ -107,7 +109,7 @@ class SocYoutubeGrowthDatasetLoader(object):
         self.get_masked_snapshot()
         time_counter.end_single('get_snapshot_mask')
 
-        print('snapshots:{0}, edge_num:{1},vertex_num:{2}'.format(self.snapshot_count, self.edge_num, self.N))
+        print('snapshots:{0}, edge_num:{1},vertex_num:{2},edge_life_num:{3}'.format(self.snapshot_count, self.edge_num, self.N,self.edge_life_num))
 
     def _get_features(self):
         features = []
@@ -118,6 +120,9 @@ class SocYoutubeGrowthDatasetLoader(object):
                              reduce='sum')
             deg_out = scatter(torch.tensor(self.edge_weights[i]), torch.tensor(row), dim=0, dim_size=num_nodes,
                               reduce='sum')
+            # ones=torch.ones_like(deg_in)
+            # deg_in+=ones
+            # deg_out+=ones
             feat = torch.cat((deg_in, deg_out)).unsqueeze(dim=0).view(deg_in.shape[0], 2)
             features.append(feat.float())
         self.features = features
@@ -132,7 +137,7 @@ class SocYoutubeGrowthDatasetLoader(object):
             y = np.log(y+1)
             self.targets.append(y)
 
-    def get_dataset(self, lags=0) -> DynamicGraphTemporalSignal:
+    def get_dataset(self) -> DynamicGraphTemporalSignal:
         time_counter.start_single('get_dataset')
         self._get_features()
         self._get_targets()
@@ -143,7 +148,7 @@ class SocYoutubeGrowthDatasetLoader(object):
         time_counter.end_single('get_dataset')
         return dataset
 
-    def get_global_dataset(self, lags=0) -> DynamicGraphTemporalSignal:
+    def get_global_dataset(self) -> DynamicGraphTemporalSignal:
         time_counter.start_single('get_dataset')
         self._get_features()
         self._get_targets()

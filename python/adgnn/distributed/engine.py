@@ -68,9 +68,9 @@ class Engine:
         ip_full_template = torch.tensor(list('000.000.000.000:00000'.encode('utf-8')), dtype=torch.uint8)
         local_ip=get_local_ip()
         if id + 1 < 10:
-            ip = local_ip + ":" + '200' + str(id + 1)
+            ip = local_ip + ":" + '500' + str(id + 1)
         else:
-            ip = local_ip + ":" + '20' + str(id + 1)
+            ip = local_ip + ":" + '50' + str(id + 1)
         print('local_id:{0}'.format(local_ip))
         byte_data = ip.encode('utf-8')  # 将字符串转换为字节流
         byte_data = torch.tensor(list(byte_data), dtype=torch.uint8)
@@ -109,7 +109,7 @@ class Engine:
             os.environ['GLOO_SOCKET_IFNAME'] = 'eno1'
         else:
             os.environ['GLOO_SOCKET_IFNAME'] = 'eno2'
-        init_method = "tcp://" + context.glContext.config['ip'] + ":7889"
+        init_method = "tcp://" + context.glContext.config['ip'] + ":9980"
         # init_method = "file:///mnt/data/nfs/sharedfile"
         print(init_method,context.glContext.config['id'],context.glContext.config['worker_num'])
 

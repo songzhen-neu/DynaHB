@@ -28,10 +28,16 @@ class TimeCounter():
         print((key + ' time: {:.4f}').format(self.time_list[key][-1]))
 
     def printAvrgTime(self,end_epoch):
+        if end_epoch==0:
+            end_epoch=len(self.time_list['batch_time'])
         for id in self.time_list.keys():
             print('average ' + str(id) + ' time: {:.4f}s'.format(np.array(self.time_list[id][:end_epoch]).mean()))
+        # np.array(self.time_list['batch_time']).mean()
+        # np.array(self.time_list['generate_batch']).mean()
 
     def printTotalTime(self,end_epoch):
+        if end_epoch == 0:
+            end_epoch = len(self.time_list['batch_time'])
         for id in self.time_list.keys():
             print('total ' + str(id) + ' time: {:.4f}s'.format(np.array(self.time_list[id][:end_epoch]).sum()))
 

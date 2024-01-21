@@ -10,7 +10,7 @@ import pandas
 
 
 
-path = '/mnt/data/dataset/ia-slashdot-reply-dir/ia-slashdot-reply-dir.edges'
+path = '/mnt/data/dataset/stackexch/stackexch.edges'
 window = 200
 is_weighted = True
 delimiter = '\s+'
@@ -50,7 +50,7 @@ def get_encoded_src_tgt(source_vertices, target_vertices):
     return source_vertices_mapped, target_vertices_mapped, vertex_num
 
 
-class IaSlashdotReplyDirDatasetLoader(object):
+class StackexchDatasetLoader(object):
     def __init__(self):
         # self.N = N
         self.target_vertex = None
@@ -90,10 +90,9 @@ class IaSlashdotReplyDirDatasetLoader(object):
 
             # time_counter.end_single('processed_window_' + str(i))
 
+        edge_snapshots = [arr for arr in edge_snapshots if arr.size > 0]
 
-        edge_snapshots = [arr for arr in edge_snapshots if arr.size > 100]
-
-        edge_weight_snapshots = [arr for arr in edge_weight_snapshots if arr.size > 50]
+        edge_weight_snapshots = [arr for arr in edge_weight_snapshots if arr.size > 0]
 
         self.snapshot_count = len(edge_snapshots)
         self.edge_num = len(source_vertices)

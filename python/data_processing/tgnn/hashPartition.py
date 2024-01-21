@@ -30,9 +30,13 @@
 # data_num = 3223589
 # write_path='/mnt/data/dataset/soc-youtube-growth/nodesPartition.hash'+str(worker_num)+'.txt'
 
-worker_num = 5
-data_num = 10356390
-write_path='/mnt/data/dataset/rec-amz-Books/nodesPartition.hash'+str(worker_num)+'.txt'
+# worker_num = 5
+# data_num = 10356390
+# write_path='/mnt/data/dataset/rec-amz-Books/nodesPartition.hash'+str(worker_num)+'.txt'
+
+# worker_num = 5
+# data_num = 545196
+# write_path='/mnt/data/dataset/stackexch/nodesPartition.hash'+str(worker_num)+'.txt'
 
 with open(write_path, 'w') as file:
     write_data = [[] for i in range(worker_num)]

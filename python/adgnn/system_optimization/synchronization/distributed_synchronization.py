@@ -16,7 +16,7 @@ class DistributedSynchronization:
         return self.model
 
     def set_sync_model(self, model):
-        self.model = DistributedDataParallel(model)
+        self.model = DistributedDataParallel(model,broadcast_buffers=False)
 
 
 SynchronousModel = DistributedSynchronization()

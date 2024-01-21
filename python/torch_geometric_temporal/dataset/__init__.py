@@ -6,3 +6,4 @@ from .soc_bitcoin import SocBitcoinDatasetLoader
 from .rec_amazon_ratings import RecAmazonRatingsDatasetLoader
 from .soc_youtube_growth import SocYoutubeGrowthDatasetLoader
 from .rec_amz_Books import RecAmzBooksDatasetLoader
+from .stackexch import StackexchDatasetLoader

@@ -52,7 +52,7 @@ class WorkloadAwarePartition:
                 last_elem_a=array_a[-1]
                 array_a=array_a[:min_length]
                 indices_mod[i]=np.column_stack((array_a,array_b)).reshape(-1)
-                indices_mod[i]=np.concatenate((indices_mod[i],last_elem_a))
+                indices_mod[i]=np.append(indices_mod[i],last_elem_a)
             else:
                 indices_mod[i] = np.column_stack((array_a, array_b)).reshape(-1)
         return indices_mod

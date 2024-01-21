@@ -384,10 +384,12 @@ class AdapRLTuner:
         #     np.log2(context.glContext.config['snap_num_train'])) + 1)]  # [1,2,4,8]
         # self.__window_size_set = [2, 8, 16, 32]
         # self.__vertex_size_set = [32, 256, 1024]
-        data_num=context.glContext.config['data_num']
+        # data_num=int(context.glContext.config['data_num']/context.glContext.config['worker_num'])
         snap_num=context.glContext.config['snap_num_train']
+        data_num=context.glContext.config['data_num_local']
         self.__window_size_set = [int(0.1*snap_num),int(0.2*snap_num), int(0.3*snap_num)]
-        self.__vertex_size_set = [int(0.005*data_num),int(0.01*data_num), int(0.05*data_num), int(0.1*data_num)]
+        # self.__vertex_size_set = [int(0.005*data_num),int(0.01*data_num), int(0.05*data_num), int(0.1*data_num)]
+        self.__vertex_size_set = [int(0.01*data_num),int(0.05*data_num),int(0.1*data_num)]
         # self.__vertex_size_set = [pow(2, i) for i in range(0, int(
         #     np.log2(context.glContext.config['data_num_local'])) + 1)]  # [1,2,4,8,16,32,64,128,256,512,1024,2048]
         # self.__vertex_size_set.append(int(context.glContext.config['data_num']/context.glContext.config['worker_num']))
@@ -408,11 +410,38 @@ class AdapRLTuner:
         self.__base_loss_time = [0, 0]
         self.batch_pool = {i: [] for i in range(self.__action_size)}
 
+    # def get_action_size_except_full(self):
+    #     return len(self.__window_size_set)*(len(self.__vertex_size_set)-1)
+
+    # def get_action_trans_except_full(self):
+    #     action_trans=[]
+    #     action=[]
+    #     for i in range(len(self.__window_size_set)):
+    #         for j in range(len(self.__vertex_size_set)):
+    #             if j != (len(self.__vertex_size_set)-1):
+    #                 action.append(i*len(self.__window_size_set)+j)
+    #                 action_trans.append([self.__window_size_set[i],self.__vertex_size_set[j]])
+    #     return [action_trans,action]
+
+
+    def get_action_and_trans_all(self):
+        action_trans=[]
+        action=[]
+        for i in range(len(self.__window_size_set)):
+            for j in range(len(self.__vertex_size_set)):
+                action.append(i*len(self.__window_size_set)+j)
+                action_trans.append([self.__window_size_set[i],self.__vertex_size_set[j]])
+        return [action_trans,action]
+
+
     def get_action(self):
         return self.__action
 
     def get_action_trans(self):
         return self.__action_trans
+
+    def get_action_size(self):
+        return len(self.__window_size_set)*len(self.__vertex_size_set)
 
     def init_adap(self, test_dataset, model):
         with torch.no_grad():
@@ -543,7 +572,6 @@ class AdapRLTuner:
                                self.__vertex_size_set[self.__action % len(self.__vertex_size_set)]]
         context.glContext.config['window_size'] = self.__action_trans[0]
         context.glContext.config['batch_size'] = self.__action_trans[1]
-
 
 ##############################################################################
 

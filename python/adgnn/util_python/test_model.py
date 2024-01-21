@@ -1,3 +1,5 @@
+import numpy as np
+
 import adgnn.context.context as context
 import torch
 def test_model(model, test_dataset):

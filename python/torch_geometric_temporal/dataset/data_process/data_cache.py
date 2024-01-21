@@ -26,7 +26,9 @@ def _calculate_deg(self):
         row, col = self.edges[i][0], self.edges[i][1]
         deg = scatter(torch.tensor(self.edge_weights[i]), torch.tensor(col), dim=0, dim_size=num_nodes,
                       reduce='sum')
-        degs.append(deg.to(dtype=torch.float32))
+        deg_out = scatter(torch.tensor(self.edge_weights[i]), torch.tensor(row), dim=0, dim_size=num_nodes,
+                      reduce='sum')
+        degs.append([deg.to(dtype=torch.float32),deg_out.to(dtype=torch.float32)])
     self.degs = degs
     time_counter.end_single('_calculate_deg')
 
@@ -92,7 +94,8 @@ def _to_local_subgraph(self):
         self.edge_weights[i] = self.edge_weights[i][mask_agg]
         self.features[i] = self.features[i][ids, :]
         self.targets[i] = self.targets[i][ids]
-        self.degs[i] = self.degs[i][ids]
+        self.degs[i][0] = self.degs[i][0][ids]
+        self.degs[i][1] = self.degs[i][1][ids]
     time_counter.end_single('_to_local_subgraph')
 
 
@@ -131,6 +134,16 @@ def _encode(self):
     self.old2new_maps = old2new_map
     time_counter.end_single('_encode')
 
+# import pandas as pd
+# def _edge_to_adj(dataset):
+#     adjs=[]
+#     for i in range(dataset.snapshot_count):
+#         # 将起始节点和结束节点分别存储到两个数组中
+#         df = pd.DataFrame(dataset.edges[i].T, columns=['src', 'dest'])
+#         adjacency_list = df.groupby('dest')['src'].apply(list).to_dict()
+#
+#         adjs.append(adjacency_list)
+#     return adjs
 
 def start_cache(dataset):
     time_counter.start_single('start_cache')
@@ -140,4 +153,5 @@ def start_cache(dataset):
     _to_local_subgraph(dataset)
     _encode(dataset)
     _encode_edge(dataset) # TODO add self-loop at this position
+    # _edge_to_adj(dataset)
     time_counter.end_single('start_cache')

@@ -196,6 +196,6 @@ class EvolveGCNO(torch.nn.Module):
         else:
             self.weight=self.weight.detach().to(X.device)
             _, self.weight = self.recurrent_layer(self.weight, self.weight)
-        self.weight = self.weight.detach()
-        X = self.conv_layer(self.weight.squeeze(dim=0), X, edge_index, edge_weight, deg)[:target_num]
+        # self.weight = self.weight.detach()
+        X = self.conv_layer(self.weight.squeeze(dim=0), X, edge_index, edge_weight, deg[0])[:target_num]
         return X

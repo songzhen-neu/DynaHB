@@ -20,14 +20,12 @@ class MPNNLSTM(nn.Module):
         self,
         in_channels: int,
         hidden_size: int,
-        num_nodes: int,
         window: int,
         dropout: float,
     ):
         super(MPNNLSTM, self).__init__()
 
         self.window = window
-        self.num_nodes = num_nodes
         self.hidden_size = hidden_size
         self.dropout = dropout
         self.in_channels = in_channels
@@ -60,6 +58,8 @@ class MPNNLSTM(nn.Module):
     def forward(
         self,
         X: torch.FloatTensor,
+        target_num,
+        deg,
         edge_index: torch.LongTensor,
         edge_weight: torch.FloatTensor,
     ) -> torch.FloatTensor:
@@ -76,7 +76,7 @@ class MPNNLSTM(nn.Module):
         """
         R = list()
 
-        S = X.view(-1, self.window, self.num_nodes, self.in_channels)
+        S = X.view(-1, self.window, X.shape[0], self.in_channels)
         S = torch.transpose(S, 1, 2)
         S = S.reshape(-1, self.window, self.in_channels)
         O = [S[:, 0, :]]
@@ -94,12 +94,13 @@ class MPNNLSTM(nn.Module):
 
         X = torch.cat(R, dim=1)
 
-        X = X.view(-1, self.window, self.num_nodes, X.size(1))
+        X = X.view(-1, self.window, X.shape[0], X.size(1))
         X = torch.transpose(X, 0, 1)
         X = X.contiguous().view(self.window, -1, X.size(3))
 
         X, (H_1, _) = self._recurrent_1(X)
         X, (H_2, _) = self._recurrent_2(X)
 
-        H = torch.cat([H_1[0, :, :], H_2[0, :, :], S], dim=1)
+        H = torch.cat([H_1[0, :, :], H_2[0, :, :], S], dim=1)[:target_num]
+
         return H

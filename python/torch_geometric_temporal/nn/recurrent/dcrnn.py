@@ -45,6 +45,7 @@ class DConv(MessagePassing):
         X: torch.FloatTensor,
         edge_index: torch.LongTensor,
         edge_weight: torch.FloatTensor,
+        deg,
     ) -> torch.FloatTensor:
         r"""Making a forward pass. If edge weights are not present the forward pass
         defaults to an unweighted graph.
@@ -59,16 +60,18 @@ class DConv(MessagePassing):
         """
 
 
-        adj_mat = to_dense_adj(edge_index, edge_attr=edge_weight)
-        adj_mat = adj_mat.reshape(adj_mat.size(1), adj_mat.size(2))
-        deg_out = torch.matmul(
-            adj_mat, torch.ones(size=(adj_mat.size(0), 1)).to(X.device)
-        )
-        deg_out = deg_out.flatten()
-        deg_in = torch.matmul(
-            torch.ones(size=(1, adj_mat.size(0))).to(X.device), adj_mat
-        )
-        deg_in = deg_in.flatten()
+        # adj_mat = to_dense_adj(edge_index, edge_attr=edge_weight)
+        # adj_mat = adj_mat.reshape(adj_mat.size(1), adj_mat.size(2))
+        # deg_out = torch.matmul(
+        #     adj_mat, torch.ones(size=(adj_mat.size(0), 1)).to(X.device)
+        # )
+        # deg_out = deg_out.flatten()
+        # deg_in = torch.matmul(
+        #     torch.ones(size=(1, adj_mat.size(0))).to(X.device), adj_mat
+        # )
+        # deg_in = deg_in.flatten()
+        deg_in=deg[0]
+        deg_out=deg[1]
 
         deg_out_inv = torch.reciprocal(deg_out)
         deg_in_inv = torch.reciprocal(deg_in)
@@ -76,8 +79,11 @@ class DConv(MessagePassing):
         norm_out = deg_out_inv[row]
         norm_in = deg_in_inv[row]
 
-        reverse_edge_index = adj_mat.transpose(0, 1)
-        reverse_edge_index, vv = dense_to_sparse(reverse_edge_index)
+        # reverse_edge_index = adj_mat.transpose(0, 1)
+        # reverse_edge_index, vv = dense_to_sparse(reverse_edge_index)
+        reverse_edge_index=torch.zeros_like(edge_index)
+        reverse_edge_index[0,:]=edge_index[1,:]
+        reverse_edge_index[1,:]=edge_index[0,:]
 
         Tx_0 = X
         Tx_1 = X
@@ -172,21 +178,21 @@ class DCRNN(torch.nn.Module):
             H = torch.zeros(X.shape[0], self.out_channels).to(X.device)
         return H
 
-    def _calculate_update_gate(self, X, edge_index, edge_weight, H,target_num):
+    def _calculate_update_gate(self, X, edge_index, edge_weight, H,target_num,deg):
         Z = torch.cat([X, H], dim=1)
-        Z = self.conv_x_z(Z, edge_index, edge_weight)
+        Z = self.conv_x_z(Z, edge_index, edge_weight,deg)
         Z = torch.sigmoid(Z)
         return Z
 
-    def _calculate_reset_gate(self, X, edge_index, edge_weight, H,target_num):
+    def _calculate_reset_gate(self, X, edge_index, edge_weight, H,target_num,deg):
         R = torch.cat([X, H], dim=1)
-        R = self.conv_x_r(R, edge_index, edge_weight)
+        R = self.conv_x_r(R, edge_index, edge_weight,deg)
         R = torch.sigmoid(R)
         return R
 
-    def _calculate_candidate_state(self, X, edge_index, edge_weight, H, R,target_num):
+    def _calculate_candidate_state(self, X, edge_index, edge_weight, H, R,target_num,deg):
         H_tilde = torch.cat([X, H * R], dim=1)
-        H_tilde = self.conv_x_h(H_tilde, edge_index, edge_weight)
+        H_tilde = self.conv_x_h(H_tilde, edge_index, edge_weight,deg)
         H_tilde = torch.tanh(H_tilde)
         return H_tilde
 
@@ -217,8 +223,8 @@ class DCRNN(torch.nn.Module):
             * **H** (PyTorch Float Tensor) - Hidden state matrix for all nodes.
         """
         H = self._set_hidden_state(X, H)
-        Z = self._calculate_update_gate(X, edge_index, edge_weight, H,target_num)
-        R = self._calculate_reset_gate(X, edge_index, edge_weight, H,target_num)
-        H_tilde = self._calculate_candidate_state(X, edge_index, edge_weight, H, R,target_num)
+        Z = self._calculate_update_gate(X, edge_index, edge_weight, H,target_num,deg)
+        R = self._calculate_reset_gate(X, edge_index, edge_weight, H,target_num,deg)
+        H_tilde = self._calculate_candidate_state(X, edge_index, edge_weight, H, R,target_num,deg)
         H = self._calculate_hidden_state(Z, H, H_tilde)
         return H[0:target_num,:]
