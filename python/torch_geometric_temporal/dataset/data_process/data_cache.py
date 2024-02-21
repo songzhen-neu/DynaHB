@@ -59,7 +59,9 @@ def _show_cal_distribution(graph, partition):
 def _get_v_of_each_layer(graph):
     time_counter.start_single('_get_v_of_each_layer')
     if context.glContext.config['partitionMethod'] == 'load_aware':
+        time_counter.start_single('load_aware')
         partition = workloadAwarePartition.getPartition(graph)
+        time_counter.end_single('load_aware')
     else:
         partition = _getPartition()
 

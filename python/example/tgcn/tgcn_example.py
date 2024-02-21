@@ -141,6 +141,7 @@ def avrg_model(model):
 optimizer = None
 context.glContext.lock = threading.Lock()
 
+
 class TGCN_Engine(Engine):
     def run_gnn(self):
         global acc_avrg
@@ -187,7 +188,6 @@ class TGCN_Engine(Engine):
         # if context.glContext.config['window_size'] == -1 or context.glContext.config['batch_size'] == -1:
         #     train_dataset_full.to_device(context.glContext.config['device'])
 
-
         epoch_count = 0
 
         # test_dataset.to_device(context.glContext.config['device'])
@@ -198,7 +198,7 @@ class TGCN_Engine(Engine):
         for i in range(adap_rl.get_action_size()):
             adap_rl.batch_pool[i] = []
 
-        if context.glContext.config['is_batch_pool']:
+        if context.glContext.config['is_batch_pool'] and context.glContext.config['is_adap_batch']:
             threads = [threading.Thread(target=generate_batch_multiple_process,
                                         args=(train_dataset, i, adap_rl, adap_rl.batch_pool[i])) for i in
                        range(adap_rl.get_action_size())]
@@ -239,18 +239,21 @@ class TGCN_Engine(Engine):
                 dist.barrier()
             time_counter.end('batch_time')
             context.glContext.lock.release()
+            # if epoch>2:
+            #     print(np.array(time_counter.time_list['batch_time'][2:]).mean())
 
             if epoch_count == 0:
                 AsynchronousModel.start_time = tm.time()
 
             if epoch == 2:
                 time_avg = getAccAvrg([1, 0], [time_counter.time_list['batch_time'][-1], 0])
-                AsynchronousModel.time_update = time_avg['train'] * 5
+                AsynchronousModel.time_update = time_avg['train'] * int(context.glContext.config['print_itv'] / 2)
 
             # if context.glContext.config['dist_mode'] == 'sync':
             #     dist.barrier()
             if (tm.time() - AsynchronousModel.start_time) / AsynchronousModel.time_update >= 1 or epoch_count == 0 or \
                     context.glContext.config['dist_mode'] == 'sync':
+            # if False:
                 if context.glContext.config['dist_mode'] == 'sync' and epoch % context.glContext.config[
                     'print_itv'] != 0:
                     continue
@@ -278,7 +281,9 @@ class TGCN_Engine(Engine):
                     min_cost[0] = acc_avrg['test']
                     min_cost[1] = epoch
                     min_cost[2] = epoch_count
-                if epoch_count - min_cost[2] >= 2:
+                if epoch_count - min_cost[2] >= 5:
+                    break
+                if min_cost[0] <= context.glContext.config['preset_cost']:
                     break
                 if context.glContext.config['dist_mode'] == 'sync':
                     dist.barrier()

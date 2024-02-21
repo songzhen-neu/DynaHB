@@ -271,7 +271,9 @@ class TGCN_Engine(Engine):
                     min_cost[0] = acc_avrg['test']
                     min_cost[1] = epoch
                     min_cost[2] = epoch_count
-                if epoch_count - min_cost[2] >= 2:
+                if min_cost[0]<=context.glContext.config['preset_cost']:
+                    break
+                if epoch_count - min_cost[2] >= 10:
                     break
                 if context.glContext.config['dist_mode'] == 'sync':
                     dist.barrier()

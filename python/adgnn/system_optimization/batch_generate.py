@@ -32,10 +32,13 @@ class BatchGenerator:
                     data_batch = adap_rl.batch_pool[action][index]
                     self.batch_choose_ratio[0] += 1
                 else:
-                    context.glContext.config['batch_size']=-1
-                    data_batch = context.glContext.train_dataset_full.get_batch(window_id)
-                    # adap_rl.batch_pool[action].append(data_batch)
-                    self.batch_choose_ratio[1] += 1
+                    if context.glContext.config['is_adap_batch']:
+                        context.glContext.config['batch_size']=-1
+                        data_batch = context.glContext.train_dataset_full.get_batch(window_id)
+                        self.batch_choose_ratio[1] += 1
+                    else:
+                        data_batch = train_dataset.get_batch(window_id)
+                        self.batch_choose_ratio[1] += 1
             else:
                 data_batch = train_dataset.get_batch(window_id)
             time_counter.end('generate_batch')
