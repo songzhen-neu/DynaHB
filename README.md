@@ -1,21 +1,7 @@
-# ADGNN: Towards Scalable GNN Training with Aggregation-Difference Aware Sampling
+# DynaHB: Communication-Avoiding Asynchronous Distributed Framework with Hybrid Batches for Dynamic GNN Training
 
 
-The argument list:
-```c++
---role_id=server,0
---worker_server_num=2,2
---ifctx=true
---data_path=/mnt/data/cora
---iter_lr_pttMethod_printInterval=200,0.01,hash,1,cuda,8
---hidden=16
---vtx_edge_feat_class_train_val_test=2708,5278,1433,7,140,500,1000
---iter_lr_pttMethod_printInterval=1000,0.2,hash,50
---sampleInfo=1:1,1000000,random
---adConfig=1:1,2,1000:1000,false,5,false,1
---servers=127.0.0.1:2001,127.0.0.1:2002,127.0.0.1:2003,127.0.0.1:2004,127.0.0.1:2005,127.0.0.1:2006
---workers=127.0.0.1:3001,127.0.0.1:3002,127.0.0.1:3003,127.0.0.1:3004,127.0.0.1:3005,127.0.0.1:3006
-```
+
 Note that, /mnt/data/cora is the common-shared nfs directory. 
 Also, you can create the directory in the local to simulate the 
 distributed environment. 
