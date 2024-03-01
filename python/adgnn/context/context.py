@@ -31,6 +31,7 @@ class Context(object):
         # 'is_adap_batch': False,
         # 'is_batch_pool': False,
         # 'dist_mode': 'sync',  # asyn, sync
+        'capacity_for_bos':True,
 
         'print_itv':20,
         'time_update': 0.01,
