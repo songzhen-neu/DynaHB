@@ -12,7 +12,7 @@ class Context(object):
         'worker_address': {},
         'id': -1,
         # 'ip':"127.0.0.1",
-        'ip': "202.199.6.224",
+        'ip': "xxx.xxx.xxx.xxx",
         # 'ip':'192.168.1.1',
         'worker_num': 5,
 
