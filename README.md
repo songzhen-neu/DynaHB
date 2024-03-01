@@ -9,7 +9,7 @@ Then use "ldd cmake/build/pb11_ec.cpython-39-x86_64-linux-gnu.so" to detect if a
 
 **_otherwise_**:
 
-If you intend to modify the core codes of ADGNN in c++, beyond the python dependencies, you need to install `cmake, grpc, protobuf, pybind11`
+If you intend to modify the core codes of DynaHB in c++, beyond the python dependencies, you need to install `cmake, grpc, protobuf, pybind11`
 
 ```
 mkdir cmake/build && cd cmake/build
